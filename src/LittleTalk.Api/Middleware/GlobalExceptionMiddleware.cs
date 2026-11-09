@@ -42,39 +42,39 @@ public class GlobalExceptionMiddleware
                 statusCode = appValEx.StatusCode;
                 message = appValEx.Message;
                 errors = appValEx.Errors;
-                _logger.LogWarning("Validation failure: {Message} | Errors: {Errors}", message, string.Join(", ", errors ?? new()));
+                _logger.LogWarning("[LittleTalk.Api] HandleExceptionAsync => Validation failure: {Message} | Errors: {Errors}", message, string.Join(", ", errors ?? new()));
                 break;
 
             case FluentValidation.ValidationException fvEx:
                 statusCode = (int)HttpStatusCode.UnprocessableEntity;
                 message = "One or more validation failures have occurred.";
                 errors = fvEx.Errors.Select(e => e.ErrorMessage).ToList();
-                _logger.LogWarning("Validation failure: {Message} | Errors: {Errors}", message, string.Join(", ", errors));
+                _logger.LogWarning("[LittleTalk.Api] HandleExceptionAsync => Validation failure: {Message} | Errors: {Errors}", message, string.Join(", ", errors));
                 break;
 
             case NotFoundException notFoundEx:
                 statusCode = notFoundEx.StatusCode;
                 message = notFoundEx.Message;
-                _logger.LogWarning("Resource not found: {Message}", message);
+                _logger.LogWarning("[LittleTalk.Api] HandleExceptionAsync => Resource not found: {Message}", message);
                 break;
 
             case UnauthorizedException unauthorizedEx:
                 statusCode = unauthorizedEx.StatusCode;
                 message = unauthorizedEx.Message;
-                _logger.LogWarning("Unauthorized access: {Message}", message);
+                _logger.LogWarning("[LittleTalk.Api] HandleExceptionAsync => Unauthorized access: {Message}", message);
                 break;
 
             case AppException appEx:
                 statusCode = appEx.StatusCode;
                 message = appEx.Message;
                 errors = appEx.Errors;
-                _logger.LogWarning("Application error: {Message}", message);
+                _logger.LogWarning("[LittleTalk.Api] HandleExceptionAsync => Application error: {Message}", message);
                 break;
 
             default:
                 statusCode = (int)HttpStatusCode.InternalServerError;
                 message = "An unexpected internal server error occurred.";
-                _logger.LogError(exception, "Unhandled exception caught by middleware: {Message}", exception.Message);
+                _logger.LogError(exception, "[LittleTalk.Api] HandleExceptionAsync => Unhandled exception caught by middleware: {Message}", exception.Message);
                 break;
         }
 
