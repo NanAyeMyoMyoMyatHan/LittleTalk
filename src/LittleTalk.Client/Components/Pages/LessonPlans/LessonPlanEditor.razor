@@ -1,5 +1,6 @@
 @page "/lesson-plans/create"
 @page "/lesson-plans/edit/{id:int}"
+@attribute [Authorize]
 @using LittleTalk.Client.Services.Features
 @using LittleTalk.Model.Features.LessonPlans
 @inject ILessonPlanApiClient LessonPlanApi

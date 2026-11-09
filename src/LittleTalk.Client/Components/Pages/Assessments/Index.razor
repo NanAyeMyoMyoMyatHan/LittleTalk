@@ -1,4 +1,5 @@
 @page "/assessments"
+@attribute [Authorize]
 @using LittleTalk.Model.Features.Assessments
 @inject IAssessmentApiClient AssessmentApi
 @inject IDialogService DialogService
@@ -106,6 +107,17 @@
             if (res != null && res.IsSuccess && res.Data != null)
             {
                 _assessments = res.Data.Items;
+            }
+            else
+            {
+                if (res?.ResultType == ResultType.Unauthorized)
+                {
+                    Snackbar.Add(res.Message, Severity.Warning);
+                    Nav.NavigateTo("/login");
+                    return;
+                }
+
+                Snackbar.Add(res?.Message ?? "Failed to load assessments.", Severity.Error);
             }
         }
         catch (Exception ex)

@@ -71,9 +71,63 @@ public abstract class BaseFeatureApiClient
 
     private static async Task<Result<T>> DeserializeResultAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            try
+            {
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    var parsed = JsonSerializer.Deserialize<Result<T>>(content, JsonOptions);
+                    if (parsed != null) return parsed;
+                }
+            }
+            catch
+            {
+                // Fall back to clean unauthorized result
+            }
+
+            return Result<T>.Unauthorized("Your session has expired or you are not authorized. Please log in again.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            return Result<T>.Unauthorized("You do not have permission to access this resource.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            try
+            {
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    var parsed = JsonSerializer.Deserialize<Result<T>>(content, JsonOptions);
+                    if (parsed != null) return parsed;
+                }
+            }
+            catch
+            {
+                // Fall back to clean not found result
+            }
+
+            return Result<T>.NotFound("The requested resource was not found.");
+        }
+
         try
         {
-            var result = await response.Content.ReadFromJsonAsync<Result<T>>(JsonOptions, cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    return Result<T>.Success(default!, "Operation completed successfully.");
+                }
+
+                return Result<T>.SystemError($"Server returned HTTP {(int)response.StatusCode} with empty response body.");
+            }
+
+            var result = JsonSerializer.Deserialize<Result<T>>(content, JsonOptions);
             return result ?? Result<T>.SystemError("Received empty response from server.");
         }
         catch (Exception ex)
@@ -84,9 +138,63 @@ public abstract class BaseFeatureApiClient
 
     private static async Task<Result> DeserializeResultAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            try
+            {
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    var parsed = JsonSerializer.Deserialize<Result>(content, JsonOptions);
+                    if (parsed != null) return parsed;
+                }
+            }
+            catch
+            {
+                // Fall back to clean unauthorized result
+            }
+
+            return Result.Unauthorized("Your session has expired or you are not authorized. Please log in again.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            return Result.Unauthorized("You do not have permission to access this resource.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            try
+            {
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    var parsed = JsonSerializer.Deserialize<Result>(content, JsonOptions);
+                    if (parsed != null) return parsed;
+                }
+            }
+            catch
+            {
+                // Fall back to clean not found result
+            }
+
+            return Result.NotFound("The requested resource was not found.");
+        }
+
         try
         {
-            var result = await response.Content.ReadFromJsonAsync<Result>(JsonOptions, cancellationToken);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    return Result.Success("Operation completed successfully.");
+                }
+
+                return Result.SystemError($"Server returned HTTP {(int)response.StatusCode} with empty response body.");
+            }
+
+            var result = JsonSerializer.Deserialize<Result>(content, JsonOptions);
             return result ?? Result.SystemError("Received empty response from server.");
         }
         catch (Exception ex)

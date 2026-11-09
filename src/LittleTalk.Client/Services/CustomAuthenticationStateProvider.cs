@@ -19,12 +19,34 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     public UserProfileResponseModel? CurrentUser => _currentUser;
     public string? CurrentToken => _currentToken;
 
+    public async Task<string?> GetTokenAsync()
+    {
+        if (!string.IsNullOrEmpty(_currentToken))
+        {
+            return _currentToken;
+        }
+
+        try
+        {
+            var token = await _localStorage.GetItemAsync<string>("lt_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                _currentToken = token;
+            }
+            return _currentToken;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         try
         {
-            var token = await _localStorage.GetItemAsync<string>("lt_token");
-            var user = await _localStorage.GetItemAsync<UserProfileResponseModel>("lt_user");
+            var token = await GetTokenAsync();
+            var user = _currentUser ?? await _localStorage.GetItemAsync<UserProfileResponseModel>("lt_user");
 
             if (string.IsNullOrEmpty(token) || user == null)
             {

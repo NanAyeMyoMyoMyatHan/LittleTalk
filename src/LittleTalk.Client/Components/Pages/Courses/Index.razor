@@ -1,4 +1,5 @@
 @page "/courses"
+@attribute [Authorize]
 @using LittleTalk.Client.Services.Features
 @using LittleTalk.Model.Features.Courses
 @inject ICourseApiClient CourseApi
@@ -165,6 +166,13 @@ else
             }
             else
             {
+                if (res?.ResultType == ResultType.Unauthorized)
+                {
+                    Snackbar.Add(res.Message, Severity.Warning);
+                    Nav.NavigateTo("/login");
+                    return;
+                }
+
                 Snackbar.Add(res?.Message ?? "Failed to load courses.", Severity.Error);
             }
         }

@@ -1,8 +1,10 @@
 @page "/attendance"
+@attribute [Authorize]
 @using LittleTalk.Model.Features.Attendance
 @inject IAttendanceApiClient AttendanceApi
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 <PageTitle>Attendance & Class Sessions - LittleTalk</PageTitle>
 
@@ -95,6 +97,17 @@
             if (res != null && res.IsSuccess && res.Data != null)
             {
                 _sessions = res.Data.Items;
+            }
+            else
+            {
+                if (res?.ResultType == ResultType.Unauthorized)
+                {
+                    Snackbar.Add(res.Message, Severity.Warning);
+                    Nav.NavigateTo("/login");
+                    return;
+                }
+
+                Snackbar.Add(res?.Message ?? "Failed to load class sessions.", Severity.Error);
             }
         }
         catch (Exception ex)

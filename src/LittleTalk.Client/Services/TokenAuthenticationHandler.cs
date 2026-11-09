@@ -14,10 +14,13 @@ public class TokenAuthenticationHandler : DelegatingHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        if (_authStateProvider is CustomAuthenticationStateProvider customProvider &&
-            !string.IsNullOrEmpty(customProvider.CurrentToken))
+        if (request.Headers.Authorization == null && _authStateProvider is CustomAuthenticationStateProvider customProvider)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", customProvider.CurrentToken);
+            var token = await customProvider.GetTokenAsync();
+            if (!string.IsNullOrEmpty(token))
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
         }
 
         return await base.SendAsync(request, cancellationToken);

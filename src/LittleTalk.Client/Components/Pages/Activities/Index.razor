@@ -1,9 +1,11 @@
 @page "/activities"
+@attribute [Authorize]
 @using LittleTalk.Client.Services.Features
 @using LittleTalk.Model.Features.Activities
 @inject IActivityApiClient ActivityApi
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 <PageTitle>Speaking Activities - LittleTalk</PageTitle>
 
@@ -155,6 +157,13 @@ else
             }
             else
             {
+                if (res?.ResultType == ResultType.Unauthorized)
+                {
+                    Snackbar.Add(res.Message, Severity.Warning);
+                    Nav.NavigateTo("/login");
+                    return;
+                }
+
                 Snackbar.Add(res?.Message ?? "Failed to load activities.", Severity.Error);
             }
         }

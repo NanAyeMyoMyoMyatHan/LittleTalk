@@ -1,8 +1,10 @@
 @page "/teaching-methods"
+@attribute [Authorize]
 @using LittleTalk.Client.Services.Features
 @using LittleTalk.Model.Features.TeachingMethods
 @inject ITeachingMethodApiClient MethodApi
 @inject ISnackbar Snackbar
+@inject NavigationManager Nav
 
 <PageTitle>Teaching Methods - LittleTalk</PageTitle>
 
@@ -88,6 +90,17 @@ else
             if (res != null && res.IsSuccess && res.Data != null)
             {
                 _methods = res.Data;
+            }
+            else
+            {
+                if (res?.ResultType == ResultType.Unauthorized)
+                {
+                    Snackbar.Add(res.Message, Severity.Warning);
+                    Nav.NavigateTo("/login");
+                    return;
+                }
+
+                Snackbar.Add(res?.Message ?? "Failed to load teaching methods.", Severity.Error);
             }
         }
         catch (Exception ex)
