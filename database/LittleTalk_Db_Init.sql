@@ -666,8 +666,8 @@ GO
 -- Using standard ASP.NET Core IPasswordHasher<TUser> PBKDF2 HMAC-SHA256 hashes
 INSERT INTO dbo.Users (RoleId, Username, Email, PasswordHash, FullName, PhoneNumber, IsActive) VALUES
 (1, 'admin', 'admin@littletalk.com', 'AQAAAAIAAYagAAAAECaPnrt7dsuvnD7v5p2hHwUJvUaSMHaVwMRZ9T+huS8WFkxM3x3Xu9yW4dltq92sbg==', 'System Administrator', '+1-555-0100', 1),
-(2, 'sarah.smith', 'sarah.smith@littletalk.com', 'AQAAAAIAAYagAAAAEL8W6mjL3ukyrCZQCAa4NdHb7ciMGCBy0uaNTZNfUrGGLtS+MCkhOq064RHtf8nz7A==', 'Sarah Smith', '+1-555-0101', 1),
-(2, 'david.lee', 'david.lee@littletalk.com', 'AQAAAAIAAYagAAAAEL8W6mjL3ukyrCZQCAa4NdHb7ciMGCBy0uaNTZNfUrGGLtS+MCkhOq064RHtf8nz7A==', 'David Lee', '+1-555-0102', 1);
+(2, 'teacher.sarah', 'teacher.sarah@littletalk.com', 'AQAAAAIAAYagAAAAEL8W6mjL3ukyrCZQCAa4NdHb7ciMGCBy0uaNTZNfUrGGLtS+MCkhOq064RHtf8nz7A==', 'Sarah Jenkins', '+1-555-0101', 1),
+(2, 'teacher.david', 'teacher.david@littletalk.com', 'AQAAAAIAAYagAAAAEL8W6mjL3ukyrCZQCAa4NdHb7ciMGCBy0uaNTZNfUrGGLtS+MCkhOq064RHtf8nz7A==', 'David Miller', '+1-555-0102', 1);
 GO
 
 -- Learning Levels

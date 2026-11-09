@@ -72,4 +72,13 @@ public class PasswordHasherTests
         // Assert
         Assert.False(result);
     }
+
+    [Theory]
+    [InlineData("AQAAAAIAAYagAAAAECaPnrt7dsuvnD7v5p2hHwUJvUaSMHaVwMRZ9T+huS8WFkxM3x3Xu9yW4dltq92sbg==", "Admin@123")]
+    [InlineData("AQAAAAIAAYagAAAAEL8W6mjL3ukyrCZQCAa4NdHb7ciMGCBy0uaNTZNfUrGGLtS+MCkhOq064RHtf8nz7A==", "Teacher@123")]
+    public void VerifyPassword_ShouldVerify_SeedDatabasePasswordHashes(string seedHash, string clearPassword)
+    {
+        var result = _hasher.VerifyPassword(seedHash, clearPassword);
+        Assert.True(result);
+    }
 }
