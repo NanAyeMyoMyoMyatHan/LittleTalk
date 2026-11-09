@@ -15,7 +15,7 @@
                 <div>
                     <div class="d-flex align-center gap-2 mb-1">
                         <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">
-                            Good day, @context.User.FindFirst("fullName")?.Value! 👋
+                            Good day, @context.User.FindFirst("fullName")?.Value!
                         </MudText>
                         <MudChip T="string" Color="@(_isAdmin ? Color.Primary : Color.Secondary)" Size="Size.Small" Variant="Variant.Filled">
                             @context.User.FindFirst("role")?.Value
@@ -469,7 +469,7 @@
                                             </div>
                                             <div class="text-right">
                                                 <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small" Style="font-weight: 700;">
-                                                    ★ @rec.OverallScore.ToString("0.0")
+                                                    Score: @rec.OverallScore.ToString("0.0")
                                                 </MudChip>
                                                 <div style="font-size: 11px; color: #718096; margin-top: 2px;">
                                                     @rec.Date.ToString("MMM dd")

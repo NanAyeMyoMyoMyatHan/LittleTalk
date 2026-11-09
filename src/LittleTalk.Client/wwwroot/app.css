@@ -17,6 +17,10 @@ h1, h2, h3, h4, h5, h6, .mud-typography-h1, .mud-typography-h2, .mud-typography-
 }
 
 /* Soft Pastel Accents */
+.text-muted, .text-secondary {
+    color: #718096 !important;
+}
+
 .lt-card {
     border-radius: 16px !important;
     border: 1px solid rgba(226, 232, 240, 0.8) !important;

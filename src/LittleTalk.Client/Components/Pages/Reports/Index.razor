@@ -172,7 +172,7 @@ else
                             @if (ast.OverallScore.HasValue)
                             {
                                 <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small" Style="font-weight: 700;">
-                                    ★ @ast.OverallScore.Value.ToString("0.0")
+                                    Score: @ast.OverallScore.Value.ToString("0.0")
                                 </MudChip>
                             }
                         </div>
@@ -186,7 +186,7 @@ else
         }
 
         <div class="mt-8 pt-4 text-center" style="border-top: 1px dashed #CBD5E0; font-size: 11px; color: #A0AEC0;">
-            LittleTalk English Speaking Teaching Management System • Official Progress Report
+            LittleTalk English Speaking Teaching Management System - Official Progress Report
         </div>
     </MudPaper>
 }
