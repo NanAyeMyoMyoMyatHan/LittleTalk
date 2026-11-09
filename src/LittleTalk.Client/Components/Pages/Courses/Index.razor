@@ -1,0 +1,241 @@
+@page "/courses"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Courses
+@inject ICourseApiClient CourseApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Course Management - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Speaking Courses</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Manage English speaking cohorts, curriculum levels, and teacher staffing</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+               OnClick="OpenCreateCourseDialog" Class="rounded-lg">
+        Create Course
+    </MudButton>
+</div>
+
+<!-- Filters -->
+<MudPaper Elevation="0" Class="pa-4 mb-6 rounded-xl lt-card" Style="background-color: #FFFFFF;">
+    <MudGrid>
+        <MudItem xs="12" sm="5">
+            <MudTextField @bind-Value="_searchTerm" Placeholder="Search by course name or code..." 
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" 
+                          AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" OnKeyUp="@((e) => HandleSearchKey(e))" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" Label="Filter by Learning Level" @bind-Value="_selectedLevelId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem Value="@((int?)null)">All Levels</MudSelectItem>
+                <MudSelectItem Value="@((int?)1)">Beginner (4-6 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)2)">Elementary (6-8 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)3)">Pre-Intermediate (8-10 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)4)">Intermediate (10-12 yrs)</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3" Class="d-flex align-center gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadCoursesAsync" FullWidth="true">
+                Filter
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFiltersAsync">
+                Reset
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Courses Grid -->
+@if (_isLoading)
+{
+    <div class="pa-12 text-center">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">Loading speaking courses...</MudText>
+    </div>
+}
+else if (!_courses.Any())
+{
+    <MudPaper Elevation="0" Class="pa-12 text-center rounded-xl lt-card" Style="background-color: #FFFFFF;">
+        <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+        <MudText Typo="Typo.h6">No courses found</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Create a new course to begin organizing kids speaking classes.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+                   OnClick="OpenCreateCourseDialog" Class="mt-4 rounded-lg">
+            Create First Course
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudGrid>
+        @foreach (var c in _courses)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="0" Class="rounded-xl lt-card h-100 d-flex flex-column" Style="background-color: #FFFFFF; border: 1px solid rgba(226, 232, 240, 0.8);">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                                @(c.CourseName.Length > 0 ? c.CourseName.Substring(0, 1).ToUpper() : "C")
+                            </MudAvatar>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">@c.CourseName</MudText>
+                            <div class="d-flex align-center gap-1">
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Outlined">@c.CourseCode</MudChip>
+                                <span class="lt-badge-soft-blue">@c.LearningLevelName</span>
+                            </div>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudChip T="string" Color="@(c.Status == "Active" ? Color.Success : Color.Default)" Size="Size.Small" Variant="Variant.Filled">
+                                @c.Status
+                            </MudChip>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 text-truncate-2">
+                            @(string.IsNullOrEmpty(c.Description) ? "No course description provided." : c.Description)
+                        </MudText>
+
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Lead Teacher:</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 600;">
+                                @(c.PrimaryTeacherName ?? "Unassigned")
+                            </MudText>
+                        </div>
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Duration:</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@(c.DurationWeeks?.ToString() ?? "Flexible") Weeks</MudText>
+                        </div>
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Enrolled Young Learners:</MudText>
+                            <MudChip T="string" Color="Color.Tertiary" Size="Size.Small" Variant="Variant.Filled">
+                                @c.EnrolledStudentsCount / @c.MaxStudents Max
+                            </MudChip>
+                        </div>
+                    </MudCardContent>
+                    <MudDivider />
+                    <MudCardActions Class="pa-3 d-flex justify-space-between">
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Group" 
+                                   OnClick="@(() => OpenCourseDetailsAsync(c.CourseId))">
+                            Manage Class
+                        </MudButton>
+                        <div>
+                            <MudIconButton Icon="@Icons.Material.Filled.LibraryBooks" Color="Color.Tertiary" Size="Size.Small" 
+                                           OnClick="@(() => Nav.NavigateTo($"/lessonplans?courseId={c.CourseId}"))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default" Size="Size.Small" 
+                                           OnClick="@(() => OpenEditCourseDialogAsync(c.CourseId))" />
+                        </div>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<CourseSummaryResponseModel> _courses = new();
+    private bool _isLoading = true;
+    private string? _searchTerm;
+    private int? _selectedLevelId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCoursesAsync();
+    }
+
+    private async Task LoadCoursesAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var request = new SearchCourseRequestModel
+            {
+                PageNumber = 1,
+                PageSize = 50,
+                SearchTerm = _searchTerm,
+                LearningLevelId = _selectedLevelId
+            };
+
+            var res = await CourseApi.GetCoursesAsync(request);
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _courses = res.Data.Items.ToList();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to load courses.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load courses: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        _searchTerm = null;
+        _selectedLevelId = null;
+        await LoadCoursesAsync();
+    }
+
+    private async Task HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadCoursesAsync();
+        }
+    }
+
+    private async Task OpenCreateCourseDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CourseDialog>("Create Speaking Course", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadCoursesAsync();
+        }
+    }
+
+    private async Task OpenEditCourseDialogAsync(int courseId)
+    {
+        var res = await CourseApi.GetCourseByIdAsync(courseId);
+        if (res == null || !res.IsSuccess || res.Data == null)
+        {
+            Snackbar.Add(res?.Message ?? "Could not load course details.", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["ExistingCourse"] = res.Data };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CourseDialog>("Edit Course", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadCoursesAsync();
+        }
+    }
+
+    private async Task OpenCourseDetailsAsync(int courseId)
+    {
+        var res = await CourseApi.GetCourseByIdAsync(courseId);
+        if (res == null || !res.IsSuccess || res.Data == null)
+        {
+            Snackbar.Add(res?.Message ?? "Could not load course details.", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["Course"] = res.Data };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CourseDetailsDialog>("Course Staffing & Students", parameters, options);
+        await dialog.Result;
+        await LoadCoursesAsync();
+    }
+}

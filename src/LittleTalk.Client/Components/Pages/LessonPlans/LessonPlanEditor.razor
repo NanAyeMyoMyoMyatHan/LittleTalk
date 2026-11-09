@@ -1,0 +1,429 @@
+@page "/lesson-plans/create"
+@page "/lesson-plans/edit/{id:int}"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.LessonPlans
+@inject ILessonPlanApiClient LessonPlanApi
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>@(IsEdit ? "Edit Lesson Plan" : "Create Lesson Plan") - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div class="d-flex align-center gap-3">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Href="/lesson-plans" />
+        <div>
+            <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">
+                @(IsEdit ? "Edit Lesson Plan" : "Design New Speaking Lesson Plan")
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Prepare step-by-step scripts, vocabulary, and methods</MudText>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" Href="/lesson-plans">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="SavePlanAsync" Disabled="@_isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Lesson Plan</span>
+            }
+        </MudButton>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center pa-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else
+{
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true"  Style="background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0;">
+    <!-- Tab 1: Basic Information -->
+    <MudTabPanel Text="1. General Details" Icon="@Icons.Material.Filled.Info">
+        <MudGrid>
+            <MudItem xs="12" sm="8">
+                <MudTextField @bind-Value="_model.Title" Label="Lesson Title *" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Placeholder="e.g. My Family & Loved Ones, Daily Routine at School" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_model.Topic" Label="Speaking Topic *" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Placeholder="e.g. Family Members, Animals, Food" Required="true" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.Description" Label="Description & Overview" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
+            </MudItem>
+
+            <MudItem xs="12" sm="4">
+                <MudSelect T="int" Label="Learning Level *" @bind-Value="_model.LearningLevelId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                    <MudSelectItem Value="1">Beginner (Little Explorers, Age 4-6)</MudSelectItem>
+                    <MudSelectItem Value="2">Elementary (Word Adventurers, Age 6-8)</MudSelectItem>
+                    <MudSelectItem Value="3">Pre-Intermediate (Sentence Builders, Age 8-10)</MudSelectItem>
+                    <MudSelectItem Value="4">Intermediate (Confident Speakers, Age 10-12)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="_model.AgeGroup" Label="Target Age Group" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. 5-7 years" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudNumericField @bind-Value="_model.DurationMinutes" Label="Total Duration (Mins) *" Variant="Variant.Outlined" Margin="Margin.Dense" Min="15" Max="180" Required="true" />
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudSelect T="int?" Label="Course Cohort (Optional)" @bind-Value="_model.CourseId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                    <MudSelectItem Value="@((int?)null)">None (Standalone Master Template)</MudSelectItem>
+                    <MudSelectItem Value="@((int?)1)">English for Beginners (BEG-01)</MudSelectItem>
+                    <MudSelectItem Value="@((int?)2)">Daily English Speaking for Kids (DSK-01)</MudSelectItem>
+                    <MudSelectItem Value="@((int?)3)">Phonics & Pronunciation Fun (PHO-01)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect T="string" Label="Publish Status *" @bind-Value="_model.Status" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                    <MudSelectItem Value="@("Draft")">Draft (Work in progress)</MudSelectItem>
+                    <MudSelectItem Value="@("Published")">Published (Ready for classroom)</MudSelectItem>
+                    <MudSelectItem Value="@("Archived")">Archived</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.LearningObjectives" Label="Learning Objectives *" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Lines="3" Placeholder="- Children can identify family members&#10;- Children can say 'This is my mother'" Required="true" />
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+
+    <!-- Tab 2: Step-by-Step Teaching Flow -->
+    <MudTabPanel Text="@($"2. Teaching Steps ({_steps.Count})")" Icon="@Icons.Material.Filled.FormatListNumbered">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <div>
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Classroom Teaching Steps</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Define warm-up, presentation, guided practice, free production, and wrap-up</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="AddStep">
+                Add Step
+            </MudButton>
+        </div>
+
+        @if (!_steps.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="rounded-lg">Click 'Add Step' to create your first teaching step.</MudAlert>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-4">
+                @for (int i = 0; i < _steps.Count; i++)
+                {
+                    var idx = i;
+                    var step = _steps[idx];
+                    step.SortOrder = idx + 1;
+
+                    <MudPaper Elevation="0" Class="pa-4 rounded-xl lt-card" Style="background-color: #F8FAFC; border: 1px solid #E2E8F0;">
+                        <div class="d-flex justify-space-between align-center mb-3">
+                            <div class="d-flex align-center gap-2">
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">Step @step.SortOrder</MudChip>
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">@(string.IsNullOrWhiteSpace(step.StepName) ? "Untitled Step" : step.StepName)</MudText>
+                            </div>
+                            <div class="d-flex align-center gap-1">
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" Disabled="@(idx == 0)" OnClick="@(() => MoveStepUp(idx))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" Disabled="@(idx == _steps.Count - 1)" OnClick="@(() => MoveStepDown(idx))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveStep(idx))" />
+                            </div>
+                        </div>
+
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="step.StepName" Label="Step Name *" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                                              Placeholder="e.g. Warm-up Song, Vocabulary Intro, Role-Play" Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="3">
+                                <MudNumericField @bind-Value="step.DurationMinutes" Label="Duration (Mins) *" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="60" Required="true" />
+                            </MudItem>
+                            <MudItem xs="12" sm="3">
+                                <MudSelect T="int?" Label="Teaching Method" @bind-Value="step.TeachingMethodId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                                    <MudSelectItem Value="@((int?)null)">None</MudSelectItem>
+                                    <MudSelectItem Value="@((int?)1)">Total Physical Response (TPR)</MudSelectItem>
+                                    <MudSelectItem Value="@((int?)2)">Phonics & Sound Blending</MudSelectItem>
+                                    <MudSelectItem Value="@((int?)3)">Call and Response</MudSelectItem>
+                                    <MudSelectItem Value="@((int?)4)">Gamified Learning</MudSelectItem>
+                                    <MudSelectItem Value="@((int?)5)">Role-Play & Simulation</MudSelectItem>
+                                    <MudSelectItem Value="@((int?)6)">Choral Repetition</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="step.Instructions" Label="Teacher Instructions & Classroom Management" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="step.TeacherScript" Label="Teacher Script (What to say aloud)" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" 
+                                              Placeholder="e.g. 'Hello friends! Who is this on my puppet card?'" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="step.ExpectedStudentResponse" Label="Expected Student Response" 
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" 
+                                              Placeholder="e.g. 'Mommy! / This is mommy!'" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
+            </div>
+        }
+    </MudTabPanel>
+
+    <!-- Tab 3: Target Vocabulary -->
+    <MudTabPanel Text="@($"3. Vocabulary ({_vocab.Count})")" Icon="@Icons.Material.Filled.Spellcheck">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <div>
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Target Vocabulary Words</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Key vocabulary with child-friendly definitions and pronunciation guide</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" OnClick="AddVocab">
+                Add Word
+            </MudButton>
+        </div>
+
+        @if (!_vocab.Any())
+        {
+            <MudAlert Severity="Severity.Info" Class="rounded-lg">Click 'Add Word' to add target words to this lesson.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@_vocab" Elevation="0" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Word *</MudTh>
+                    <MudTh>Pronunciation</MudTh>
+                    <MudTh>Child-Friendly Meaning</MudTh>
+                    <MudTh>Example Sentence</MudTh>
+                    <MudTh Style="width: 50px;"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudTextField @bind-Value="context.Word" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. Mother" />
+                    </MudTd>
+                    <MudTd>
+                        <MudTextField @bind-Value="context.Pronunciation" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. /ˈmʌð.ər/" />
+                    </MudTd>
+                    <MudTd>
+                        <MudTextField @bind-Value="context.Meaning" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Female parent / mommy" />
+                    </MudTd>
+                    <MudTd>
+                        <MudTextField @bind-Value="context.ExampleSentence" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="I love my mother." />
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => _vocab.Remove(context))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudTabPanel>
+</MudTabs>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue && Id.Value > 0;
+    private CreateLessonPlanRequestModel _model = new()
+    {
+        DurationMinutes = 45,
+        LearningLevelId = 1,
+        Status = "Draft",
+        AgeGroup = "5-7 years"
+    };
+
+    private List<CreateLessonStepRequestModel> _steps = new();
+
+    public class VocabItemModel
+    {
+        public string Word { get; set; } = string.Empty;
+        public string Meaning { get; set; } = string.Empty;
+        public string? Pronunciation { get; set; }
+        public string ExampleSentence { get; set; } = string.Empty;
+    }
+
+    private List<VocabItemModel> _vocab = new();
+    private bool _isLoading = false;
+    private bool _isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEdit)
+        {
+            await LoadExistingPlanAsync(Id!.Value);
+        }
+        else
+        {
+            // Starter flow for teachers
+            _steps.Add(new CreateLessonStepRequestModel { StepName = "Warm-up & Hello Song", DurationMinutes = 5, SortOrder = 1, TeacherScript = "Good morning friends! How are you today?", ExpectedStudentResponse = "I am happy / Good morning teacher!" });
+            _steps.Add(new CreateLessonStepRequestModel { StepName = "Vocabulary Presentation", DurationMinutes = 15, SortOrder = 2, TeachingMethodId = 1, Instructions = "Use flashcards with TPR gestures" });
+            _steps.Add(new CreateLessonStepRequestModel { StepName = "Interactive Speaking Game", DurationMinutes = 15, SortOrder = 3, TeachingMethodId = 4 });
+            _steps.Add(new CreateLessonStepRequestModel { StepName = "Wrap-up & Goodbye", DurationMinutes = 10, SortOrder = 4 });
+        }
+    }
+
+    private async Task LoadExistingPlanAsync(int planId)
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await LessonPlanApi.GetLessonPlanByIdAsync(planId);
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                var d = res.Data;
+                _model.CourseId = d.CourseId;
+                _model.Title = d.Title;
+                _model.Topic = d.Topic;
+                _model.Description = d.Description;
+                _model.LearningLevelId = d.LearningLevelId;
+                _model.AgeGroup = d.AgeGroup;
+                _model.DurationMinutes = d.DurationMinutes;
+                _model.LearningObjectives = d.LearningObjectives;
+                _model.Status = d.Status;
+
+                _steps = d.Steps.Select(s => new CreateLessonStepRequestModel
+                {
+                    StepName = s.StepName,
+                    SortOrder = s.SortOrder,
+                    DurationMinutes = s.DurationMinutes,
+                    TeachingMethodId = s.TeachingMethodId,
+                    Instructions = s.Instructions,
+                    TeacherScript = s.TeacherScript,
+                    ExpectedStudentResponse = s.ExpectedStudentResponse
+                }).ToList();
+
+                _vocab = d.Vocabulary.Select(v => new VocabItemModel
+                {
+                    Word = v.Word,
+                    Pronunciation = v.Pronunciation,
+                    Meaning = v.Meaning,
+                    ExampleSentence = v.ExampleSentence
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void AddStep()
+    {
+        _steps.Add(new CreateLessonStepRequestModel
+        {
+            StepName = $"Step {_steps.Count + 1}",
+            DurationMinutes = 10,
+            SortOrder = _steps.Count + 1
+        });
+    }
+
+    private void RemoveStep(int index)
+    {
+        if (index >= 0 && index < _steps.Count)
+        {
+            _steps.RemoveAt(index);
+        }
+    }
+
+    private void MoveStepUp(int index)
+    {
+        if (index > 0)
+        {
+            var temp = _steps[index];
+            _steps[index] = _steps[index - 1];
+            _steps[index - 1] = temp;
+        }
+    }
+
+    private void MoveStepDown(int index)
+    {
+        if (index < _steps.Count - 1)
+        {
+            var temp = _steps[index];
+            _steps[index] = _steps[index + 1];
+            _steps[index + 1] = temp;
+        }
+    }
+
+    private void AddVocab()
+    {
+        _vocab.Add(new VocabItemModel
+        {
+            Word = "",
+            Meaning = ""
+        });
+    }
+
+    private async Task SavePlanAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Title) || string.IsNullOrWhiteSpace(_model.Topic) || string.IsNullOrWhiteSpace(_model.LearningObjectives))
+        {
+            Snackbar.Add("Title, Topic, and Learning Objectives are required.", Severity.Warning);
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            _model.InitialSteps = _steps;
+
+            if (IsEdit)
+            {
+                var updateModel = new UpdateLessonPlanRequestModel
+                {
+                    CourseId = _model.CourseId,
+                    Title = _model.Title,
+                    Topic = _model.Topic,
+                    Description = _model.Description,
+                    LearningLevelId = _model.LearningLevelId,
+                    AgeGroup = _model.AgeGroup,
+                    DurationMinutes = _model.DurationMinutes,
+                    LearningObjectives = _model.LearningObjectives,
+                    Status = _model.Status
+                };
+
+                var res = await LessonPlanApi.UpdateLessonPlanAsync(Id!.Value, updateModel);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Lesson plan updated successfully!", Severity.Success);
+                    Nav.NavigateTo("/lesson-plans");
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update lesson plan.", Severity.Error);
+                }
+            }
+            else
+            {
+                var res = await LessonPlanApi.CreateLessonPlanAsync(_model);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Lesson plan created successfully!", Severity.Success);
+                    Nav.NavigateTo("/lesson-plans");
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to create lesson plan.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

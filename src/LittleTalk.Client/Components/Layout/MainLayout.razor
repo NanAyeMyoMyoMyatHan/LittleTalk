@@ -1,0 +1,119 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject CustomAuthenticationStateProvider AuthStateProvider
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Medium" />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Dense="true" Class="px-4" Style="background-color: #FFFFFF; color: #2D3748; border-bottom: 1px solid #E2E8F0;">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        
+        <div class="d-flex align-center gap-2 ml-2">
+            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Color="Color.Primary" Size="Size.Small" />
+            <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: #2B6CB0;">LittleTalk Kids English</MudText>
+        </div>
+
+        <MudSpacer />
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="d-flex align-center gap-3">
+                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.VerifiedUser">
+                        @context.User.FindFirst("role")?.Value
+                    </MudChip>
+                    <MudText Typo="Typo.body2" Class="d-none d-sm-flex" Style="font-weight: 600;">
+                        @context.User.FindFirst("fullName")?.Value
+                    </MudText>
+                    <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                        <div class="px-4 py-2">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">@context.User.FindFirst("fullName")?.Value</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.User.Identity?.Name (@context.User.FindFirst("role")?.Value)</MudText>
+                        </div>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" OnClick="@(() => Nav.NavigateTo("/"))">Dashboard</MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error" OnClick="LogoutAsync">Sign Out</MudMenuItem>
+                    </MudMenu>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Login" Href="/login">
+                    Sign In
+                </MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="1" Variant="DrawerVariant.Responsive" Style="background-color: #FFFFFF; border-right: 1px solid #E2E8F0;">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="pa-4 pa-md-6" Style="background-color: #F8FAFC; min-height: 100vh;">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthStateProvider.MarkUserAsLoggedOut();
+        Nav.NavigateTo("/login");
+    }
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#4A90E2",         // Friendly Sky Blue
+            Secondary = "#FF6B6B",       // Warm Coral
+            Tertiary = "#2EC4B6",        // Fresh Mint
+            Info = "#38B2AC",            // Teal
+            Success = "#38A169",         // Grass Green
+            Warning = "#ED8936",         // Cheerful Orange
+            Error = "#E53E3E",           // Soft Red
+            AppbarBackground = "#FFFFFF",
+            AppbarText = "#2D3748",
+            Background = "#F8FAFC",
+            Surface = "#FFFFFF",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#2D3748",
+            ActionDefault = "#718096"
+        },
+        LayoutProperties = new LayoutProperties()
+        {
+            DefaultBorderRadius = "12px",
+            AppbarHeight = "56px"
+        },
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Quicksand", "Roboto", "Helvetica", "Arial", "sans-serif" }
+            },
+            H4 = new H4Typography()
+            {
+                FontFamily = new[] { "Fredoka", "Quicksand", "sans-serif" },
+                FontWeight = "700"
+            },
+            H5 = new H5Typography()
+            {
+                FontFamily = new[] { "Fredoka", "Quicksand", "sans-serif" },
+                FontWeight = "600"
+            },
+            H6 = new H6Typography()
+            {
+                FontFamily = new[] { "Fredoka", "Quicksand", "sans-serif" },
+                FontWeight = "600"
+            }
+        }
+    };
+}

@@ -1,0 +1,131 @@
+@page "/assessments"
+@using LittleTalk.Model.Features.Assessments
+@inject IAssessmentApiClient AssessmentApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Speaking Assessments - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Speaking Skills Assessments</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Evaluate children's oral proficiency across vocabulary, pronunciation, sentences, fluency, comprehension, and confidence</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.StarRate" 
+               OnClick="OpenCreateAssessmentDialog" Class="rounded-lg">
+        Record Assessment
+    </MudButton>
+</div>
+
+<!-- Assessments Table -->
+<MudPaper Elevation="0" Class="rounded-xl lt-card" Style="background-color: #FFFFFF; overflow: hidden;">
+    <MudTable Items="@_assessments" Loading="@_isLoading" Hover="true" Elevation="0" Dense="false">
+        <HeaderContent>
+            <MudTh>Student</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Course & Topic</MudTh>
+            <MudTh>Evaluator</MudTh>
+            <MudTh>Overall Score</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="text-align: right;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Student">
+                <div class="d-flex align-center gap-2">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small">
+                        @(string.IsNullOrEmpty(context.StudentFullName) ? "S" : context.StudentFullName.Substring(0, 1).ToUpper())
+                    </MudAvatar>
+                    <div>
+                        <strong style="font-size: 14px;">@context.StudentFullName</strong>
+                        <div style="font-size: 11px; color: #718096;">@context.StudentCode</div>
+                    </div>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Date">
+                @context.AssessmentDate.ToString("MMM dd, yyyy")
+            </MudTd>
+            <MudTd DataLabel="Course & Topic">
+                <div>@(context.CourseName ?? "General Assessment")</div>
+                @if (!string.IsNullOrEmpty(context.LessonTitle))
+                {
+                    <div style="font-size: 11px; color: #718096;">Topic: @context.LessonTitle</div>
+                }
+            </MudTd>
+            <MudTd DataLabel="Evaluator">
+                @context.EvaluatorTeacherName
+            </MudTd>
+            <MudTd DataLabel="Overall Score">
+                @if (context.OverallScore.HasValue)
+                {
+                    <div class="d-flex align-center gap-1">
+                        <MudRating SelectedValue="@((int)Math.Round(context.OverallScore.Value))" ReadOnly="true" Color="Color.Warning" Size="Size.Small" />
+                        <strong style="color: #C05621; font-size: 13px;">@context.OverallScore.Value.ToString("0.0")</strong>
+                    </div>
+                }
+                else
+                {
+                    <span style="color: #A0AEC0;">Pending</span>
+                }
+            </MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions" Style="text-align: right;">
+                <MudButton Variant="Variant.Outlined" Color="Color.Tertiary" Size="Size.Small" StartIcon="@Icons.Material.Filled.ShowChart"
+                           OnClick="@(() => Nav.NavigateTo($"/reports?studentId={context.StudentId}"))">
+                    View Report
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.StarBorder" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No assessments recorded yet</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Record oral speaking scores for your students.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<AssessmentSummaryResponseModel> _assessments = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAssessmentsAsync();
+    }
+
+    private async Task LoadAssessmentsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await AssessmentApi.GetAssessmentsAsync(new SearchAssessmentRequestModel { PageSize = 50 });
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _assessments = res.Data.Items;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenCreateAssessmentDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AssessmentDialog>("Record Child Speaking Assessment", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadAssessmentsAsync();
+        }
+    }
+}

@@ -1,0 +1,102 @@
+@page "/teaching-methods"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.TeachingMethods
+@inject ITeachingMethodApiClient MethodApi
+@inject ISnackbar Snackbar
+
+<PageTitle>Teaching Methods - LittleTalk</PageTitle>
+
+<div class="mb-6">
+    <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Teaching Methods Library</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Evidence-based pedagogical techniques designed specifically for young English language learners</MudText>
+</div>
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center pa-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (!_methods.Any())
+{
+    <MudAlert Severity="Severity.Info">No teaching methods available in library.</MudAlert>
+}
+else
+{
+    <MudGrid>
+        @foreach (var m in _methods)
+        {
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="0" Class="rounded-xl lt-card h-100 d-flex flex-column" Style="background-color: #FFFFFF;">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Style="background-color: #2EC4B6 !important;">
+                                <MudIcon Icon="@Icons.Material.Filled.Lightbulb" />
+                            </MudAvatar>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6" Style="font-weight: 700; color: #2D3748;">@m.Name</MudText>
+                            @if (!string.IsNullOrEmpty(m.SuitableAgeGroup))
+                            {
+                                <span class="lt-badge-soft-blue" style="font-size: 11px;">Best for: @m.SuitableAgeGroup</span>
+                            }
+                        </CardHeaderContent>
+                    </MudCardHeader>
+
+                    <MudCardContent Class="py-2 flex-grow-1">
+                        <MudText Typo="Typo.body2" Class="mb-4" Style="color: #4A5568;">
+                            @m.Description
+                        </MudText>
+
+                        @if (!string.IsNullOrEmpty(m.TeachingInstructions))
+                        {
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC; border-left: 4px solid #2EC4B6 !important;">
+                                <MudText Typo="Typo.caption" Style="font-weight: 700; color: #234E52; text-transform: uppercase;">
+                                    Classroom Implementation Guidelines:
+                                </MudText>
+                                <MudText Typo="Typo.body2" Style="color: #2D3748; margin-top: 2px;">
+                                    @m.TeachingInstructions
+                                </MudText>
+                            </MudPaper>
+                        }
+                    </MudCardContent>
+
+                    <MudCardActions Class="pa-4 d-flex justify-space-between align-center" Style="border-top: 1px solid #EDF2F7;">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Applicable in Lesson Steps & Speaking Activities
+                        </MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" Href="/lesson-plans/create">
+                            Use in Lesson Plan
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<TeachingMethodResponseModel> _methods = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await MethodApi.GetAllMethodsAsync();
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _methods = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

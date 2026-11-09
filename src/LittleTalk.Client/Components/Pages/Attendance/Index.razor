@@ -1,0 +1,129 @@
+@page "/attendance"
+@using LittleTalk.Model.Features.Attendance
+@inject IAttendanceApiClient AttendanceApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Attendance & Class Sessions - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Class Sessions & Attendance</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Track student attendance, class participation, and session scheduling</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+               OnClick="OpenScheduleSessionDialog" Class="rounded-lg">
+        Schedule Session
+    </MudButton>
+</div>
+
+<!-- Sessions Table -->
+<MudPaper Elevation="0" Class="rounded-xl lt-card" Style="background-color: #FFFFFF; overflow: hidden;">
+    <MudTable Items="@_sessions" Loading="@_isLoading" Hover="true" Elevation="0" Dense="false">
+        <HeaderContent>
+            <MudTh>Session Date & Time</MudTh>
+            <MudTh>Course</MudTh>
+            <MudTh>Lesson Plan</MudTh>
+            <MudTh>Teacher</MudTh>
+            <MudTh>Room / Location</MudTh>
+            <MudTh>Enrolled</MudTh>
+            <MudTh Style="text-align: right;">Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Session Date & Time">
+                <div class="d-flex align-center gap-2">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" />
+                    </MudAvatar>
+                    <div>
+                        <strong style="font-size: 14px;">@context.SessionDate.ToString("ddd, MMM dd, yyyy")</strong>
+                        <div style="font-size: 11px; color: #718096;">
+                            @(context.StartTime?.ToString(@"hh\:mm") ?? "TBD") - @(context.EndTime?.ToString(@"hh\:mm") ?? "TBD")
+                        </div>
+                    </div>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Course">
+                <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">
+                    @context.CourseName
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Lesson Plan">
+                @(context.LessonTitle ?? "Open Speaking Workshop")
+            </MudTd>
+            <MudTd DataLabel="Teacher">
+                @context.TeacherName
+            </MudTd>
+            <MudTd DataLabel="Room / Location">
+                @(context.RoomOrLink ?? "Room 101")
+            </MudTd>
+            <MudTd DataLabel="Enrolled">
+                <span class="lt-badge-soft-blue">@context.TotalEnrolledStudents students</span>
+            </MudTd>
+            <MudTd DataLabel="Action" Style="text-align: right;">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" 
+                           StartIcon="@Icons.Material.Filled.EventAvailable" OnClick="@(() => OpenTakeAttendanceDialog(context))">
+                    Take Attendance
+                </MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.EventBusy" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No class sessions scheduled</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Click 'Schedule Session' to create a new class date.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<ClassSessionResponseModel> _sessions = new();
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSessionsAsync();
+    }
+
+    private async Task LoadSessionsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await AttendanceApi.GetSessionsAsync(new SearchClassSessionRequestModel { PageSize = 50 });
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _sessions = res.Data.Items;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenScheduleSessionDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CreateSessionDialog>("Schedule Class Session", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadSessionsAsync();
+        }
+    }
+
+    private async Task OpenTakeAttendanceDialog(ClassSessionResponseModel session)
+    {
+        var parameters = new DialogParameters { ["Session"] = session };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<TakeAttendanceDialog>("Take Attendance", parameters, options);
+        await dialog.Result;
+        await LoadSessionsAsync();
+    }
+}

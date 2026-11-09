@@ -1,0 +1,161 @@
+@using LittleTalk.Model.Features.Attendance
+@using LittleTalk.Model.Features.Courses
+@using LittleTalk.Model.Features.LessonPlans
+@inject IAttendanceApiClient AttendanceApi
+@inject ICourseApiClient CourseApi
+@inject ILessonPlanApiClient LessonPlanApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Schedule New Class Session</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@_model">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Course *" @bind-Value="_model.CourseId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        @if (_courses != null)
+                        {
+                            @foreach (var c in _courses)
+                            {
+                                <MudSelectItem Value="@c.CourseId">@c.CourseName (@c.CourseCode)</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Teacher *" @bind-Value="_model.TeacherId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        <MudSelectItem Value="2">Sarah Jenkins</MudSelectItem>
+                        <MudSelectItem Value="3">David Miller</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int?" Label="Assigned Lesson Plan" @bind-Value="_model.LessonPlanId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                        <MudSelectItem Value="@((int?)null)">None (Open Speaking Session)</MudSelectItem>
+                        @if (_lessonPlans != null)
+                        {
+                            @foreach (var lp in _lessonPlans)
+                            {
+                                <MudSelectItem Value="@((int?)lp.LessonPlanId)">@lp.Title (@lp.AgeGroup)</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.RoomOrLink" Label="Classroom / Online Room" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Room 101 / Zoom Room A" />
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudDatePicker Label="Session Date *" @bind-Date="_sessionDate" Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="yyyy-MM-dd" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTimePicker Label="Start Time" @bind-Time="_startTime" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTimePicker Label="End Time" @bind-Time="_endTime" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Notes" Label="Session Notes" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" Placeholder="Bring puppets and coloring sheets" />
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveSessionAsync" Disabled="@_isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Scheduling...</span>
+            }
+            else
+            {
+                <span>Schedule Session</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private CreateClassSessionRequestModel _model = new() { CourseId = 1, TeacherId = 2 };
+    private DateTime? _sessionDate = DateTime.Today;
+    private TimeSpan? _startTime = new TimeSpan(10, 0, 0);
+    private TimeSpan? _endTime = new TimeSpan(10, 45, 0);
+    private bool _isSaving = false;
+
+    private List<CourseSummaryResponseModel> _courses = new();
+    private List<LessonPlanSummaryResponseModel> _lessonPlans = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var coursesRes = await CourseApi.GetCoursesAsync(new SearchCourseRequestModel { PageSize = 100 });
+            if (coursesRes?.IsSuccess == true && coursesRes.Data?.Items != null)
+            {
+                _courses = coursesRes.Data.Items;
+                if (_courses.Any() && _model.CourseId == 0)
+                {
+                    _model.CourseId = _courses.First().CourseId;
+                }
+            }
+
+            var lpRes = await LessonPlanApi.GetLessonPlansAsync(new SearchLessonPlanRequestModel { PageSize = 100 });
+            if (lpRes?.IsSuccess == true && lpRes.Data?.Items != null)
+            {
+                _lessonPlans = lpRes.Data.Items;
+            }
+        }
+        catch
+        {
+            // Ignore background loading errors
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveSessionAsync()
+    {
+        if (!_sessionDate.HasValue)
+        {
+            Snackbar.Add("Session date is required.", Severity.Warning);
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            _model.SessionDate = DateOnly.FromDateTime(_sessionDate.Value);
+            _model.StartTime = _startTime.HasValue ? TimeOnly.FromTimeSpan(_startTime.Value) : null;
+            _model.EndTime = _endTime.HasValue ? TimeOnly.FromTimeSpan(_endTime.Value) : null;
+
+            var res = await AttendanceApi.CreateSessionAsync(_model);
+            if (res != null && res.IsSuccess)
+            {
+                Snackbar.Add("Session scheduled successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to schedule session.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

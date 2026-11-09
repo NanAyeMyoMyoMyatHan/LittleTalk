@@ -1,0 +1,91 @@
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<div class="pa-4 d-flex align-center gap-3">
+    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium" Rounded="true">
+        <MudIcon Icon="@Icons.Material.Filled.RecordVoiceOver" Size="Size.Medium" />
+    </MudAvatar>
+    <div>
+        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #2B6CB0; letter-spacing: -0.5px; line-height: 1.1;">LittleTalk</MudText>
+        <MudText Typo="Typo.caption" Style="color: #718096;">Kids Speaking System</MudText>
+    </div>
+</div>
+
+<MudDivider Class="my-2" />
+
+<MudNavMenu Bordered="false" Rounded="true" Margin="Margin.Dense" Color="Color.Primary" Class="px-2">
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">
+        Dashboard
+    </MudNavLink>
+
+    <MudNavGroup  Icon="@Icons.Material.Filled.School" Expanded="true">
+        <MudNavLink Href="/students" Icon="@Icons.Material.Filled.Face">
+            Students
+        </MudNavLink>
+        <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.Class">
+            Courses
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup  Icon="@Icons.Material.Filled.MenuBook" Expanded="true">
+        <MudNavLink Href="/lesson-plans" Icon="@Icons.Material.Filled.AutoStories">
+            Lesson Plans
+        </MudNavLink>
+        <MudNavLink Href="/teaching-methods" Icon="@Icons.Material.Filled.Lightbulb">
+            Teaching Methods
+        </MudNavLink>
+        <MudNavLink Href="/activities" Icon="@Icons.Material.Filled.SportsEsports">
+            Speaking Activities
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup  Icon="@Icons.Material.Filled.Assessment" Expanded="true">
+        <MudNavLink Href="/attendance" Icon="@Icons.Material.Filled.EventAvailable">
+            Attendance
+        </MudNavLink>
+        <MudNavLink Href="/assessments" Icon="@Icons.Material.Filled.StarRate">
+            Speaking Assessments
+        </MudNavLink>
+        <MudNavLink Href="/reports" Icon="@Icons.Material.Filled.ShowChart">
+            Progress Reports
+        </MudNavLink>
+    </MudNavGroup>
+</MudNavMenu>
+
+<div class="mt-auto pa-4">
+    <AuthorizeView>
+        <Authorized>
+            <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #EDF2F7;">
+                <div class="d-flex align-center gap-2 mb-2">
+                    <MudAvatar Color="Color.Secondary" Size="Size.Small">
+                        @(context.User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                    </MudAvatar>
+                    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.User.Identity?.Name</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @context.User.FindFirst("role")?.Value
+                        </MudText>
+                    </div>
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" FullWidth="true" 
+                           StartIcon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                    Sign Out
+                </MudButton>
+            </MudPaper>
+        </Authorized>
+        <NotAuthorized>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" FullWidth="true" 
+                       StartIcon="@Icons.Material.Filled.Login" Href="/login">
+                Sign In
+            </MudButton>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        await AuthStateProvider.MarkUserAsLoggedOut();
+        Nav.NavigateTo("/login");
+    }
+}

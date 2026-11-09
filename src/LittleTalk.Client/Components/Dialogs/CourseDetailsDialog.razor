@@ -1,0 +1,227 @@
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Courses
+@inject ICourseApiClient CourseApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">@Course.CourseName</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Code: @Course.CourseCode | Level: @Course.LearningLevelName</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" >
+            <!-- Tab 1: Overview & Teachers -->
+            <MudTabPanel Text="Teachers & Details" Icon="@Icons.Material.Filled.School">
+                <MudText Typo="Typo.body2" Class="mb-4">@Course.Description</MudText>
+
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">Assigned Teachers</MudText>
+                </div>
+
+                @if (!Course.Teachers.Any())
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4">No teachers currently assigned to this course.</MudAlert>
+                }
+                else
+                {
+                    <MudList T="CourseTeacherResponseModel" Dense="true" Class="mb-4">
+                        @foreach (var t in Course.Teachers)
+                        {
+                            <MudListItem T="CourseTeacherResponseModel">
+                                <div class="d-flex justify-space-between align-center w-100">
+                                    <div class="d-flex align-center gap-2">
+                                        <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                            @(t.TeacherName.Length > 0 ? t.TeacherName.Substring(0, 1).ToUpper() : "T")
+                                        </MudAvatar>
+                                        <div>
+                                            <strong>@t.TeacherName</strong>
+                                            <MudChip T="string" Color="@(t.RoleInCourse == "Primary" ? Color.Primary : Color.Default)" Size="Size.Small" Class="ml-2">
+                                                @t.RoleInCourse
+                                            </MudChip>
+                                        </div>
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" 
+                                                   OnClick="@(() => RemoveTeacherAsync(t.TeacherId, t.TeacherName))" />
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+
+                <!-- Assign Teacher Form -->
+                <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC;">
+                    <MudText Typo="Typo.caption" Style="font-weight: 700;" Class="d-block mb-2">Assign Teacher to Course</MudText>
+                    <div class="d-flex gap-2">
+                        <MudSelect T="int" Label="Teacher" @bind-Value="_assignTeacherId" Margin="Margin.Dense" Variant="Variant.Outlined">
+                            <MudSelectItem Value="2">Sarah Jenkins</MudSelectItem>
+                            <MudSelectItem Value="3">David Miller</MudSelectItem>
+                        </MudSelect>
+                        <MudSelect T="string" Label="Role" @bind-Value="_assignRole" Margin="Margin.Dense" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Primary")">Primary Lead</MudSelectItem>
+                            <MudSelectItem Value="@("CoTeacher")">Co-Teacher</MudSelectItem>
+                            <MudSelectItem Value="@("Assistant")">Assistant</MudSelectItem>
+                            <MudSelectItem Value="@("Substitute")">Substitute</MudSelectItem>
+                        </MudSelect>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="AssignTeacherAsync">
+                            Assign
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudTabPanel>
+
+            <!-- Tab 2: Enrolled Students -->
+            <MudTabPanel Text="Enrolled Young Learners" Icon="@Icons.Material.Filled.Group" BadgeData="@Course.EnrolledStudents.Count" BadgeColor="Color.Primary">
+                <div class="d-flex justify-space-between align-center my-3">
+                    <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">
+                        Class Roster (@Course.EnrolledStudents.Count / @Course.MaxStudents Capacity)
+                    </MudText>
+                </div>
+
+                @if (!Course.EnrolledStudents.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">No young learners enrolled yet.</MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@Course.EnrolledStudents" Dense="true" Elevation="0" Hover="true" Class="mb-4">
+                        <HeaderContent>
+                            <MudTh>Code</MudTh>
+                            <MudTh>Student Name</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Enrolled Date</MudTh>
+                            <MudTh Style="text-align: right;">Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>@context.StudentCode</MudTd>
+                            <MudTd>
+                                <strong>@context.StudentFullName</strong>
+                                @if (!string.IsNullOrEmpty(context.StudentNickName))
+                                {
+                                    <span style="color: #718096; font-size: 11px;"> (@context.StudentNickName)</span>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                <MudChip T="string" Color="@(context.Status == "Enrolled" ? Color.Success : Color.Default)" Size="Size.Small">
+                                    @context.Status
+                                </MudChip>
+                            </MudTd>
+                            <MudTd>@context.EnrollmentDate.ToString("yyyy-MM-dd")</MudTd>
+                            <MudTd Style="text-align: right;">
+                                <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Color="Color.Error" Size="Size.Small" 
+                                               OnClick="@(() => RemoveEnrollmentAsync(context.StudentId, context.StudentFullName))" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+
+                <!-- Quick Enroll -->
+                <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC;">
+                    <MudText Typo="Typo.caption" Style="font-weight: 700;" Class="d-block mb-2">Enroll Registered Student</MudText>
+                    <div class="d-flex gap-2">
+                        <MudSelect T="int" Label="Student" @bind-Value="_enrollStudentId" Margin="Margin.Dense" Variant="Variant.Outlined">
+                            <MudSelectItem Value="1">Liam Smith (STU-000001)</MudSelectItem>
+                            <MudSelectItem Value="2">Mia Johnson (STU-000002)</MudSelectItem>
+                            <MudSelectItem Value="3">Noah Williams (STU-000003)</MudSelectItem>
+                            <MudSelectItem Value="4">Ava Brown (STU-000004)</MudSelectItem>
+                            <MudSelectItem Value="5">Ethan Jones (STU-000005)</MudSelectItem>
+                        </MudSelect>
+                        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Size="Size.Small" OnClick="EnrollStudentAsync">
+                            Enroll Student
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Close">Done</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public CourseDetailResponseModel Course { get; set; } = null!;
+
+    private int _assignTeacherId = 2;
+    private string _assignRole = "Assistant";
+    private int _enrollStudentId = 1;
+
+    private void Close() => MudDialog.Close();
+
+    private async Task AssignTeacherAsync()
+    {
+        var request = new AssignTeacherRequestModel { TeacherId = _assignTeacherId, RoleInCourse = _assignRole };
+        var res = await CourseApi.AssignTeacherAsync(Course.CourseId, request);
+        if (res != null && res.IsSuccess)
+        {
+            Snackbar.Add("Teacher assigned to course!", Severity.Success);
+            await RefreshCourseAsync();
+        }
+        else
+        {
+            Snackbar.Add(res?.Message ?? "Failed to assign teacher.", Severity.Error);
+        }
+    }
+
+    private async Task RemoveTeacherAsync(int teacherId, string name)
+    {
+        var res = await CourseApi.RemoveTeacherAsync(Course.CourseId, teacherId);
+        if (res != null && res.IsSuccess)
+        {
+            Snackbar.Add($"Teacher {name} removed from course.", Severity.Info);
+            await RefreshCourseAsync();
+        }
+        else
+        {
+            Snackbar.Add(res?.Message ?? "Failed to remove teacher.", Severity.Error);
+        }
+    }
+
+    private async Task EnrollStudentAsync()
+    {
+        var request = new EnrollStudentRequestModel { StudentId = _enrollStudentId };
+        var res = await CourseApi.EnrollStudentAsync(Course.CourseId, request);
+        if (res != null && res.IsSuccess)
+        {
+            Snackbar.Add("Student enrolled successfully!", Severity.Success);
+            await RefreshCourseAsync();
+        }
+        else
+        {
+            Snackbar.Add(res?.Message ?? "Failed to enroll student.", Severity.Error);
+        }
+    }
+
+    private async Task RemoveEnrollmentAsync(int studentId, string name)
+    {
+        var request = new UpdateEnrollmentStatusRequestModel { Status = "Dropped" };
+        var res = await CourseApi.UpdateEnrollmentStatusAsync(Course.CourseId, studentId, request);
+        if (res != null && res.IsSuccess)
+        {
+            Snackbar.Add($"Student {name} enrollment withdrawn.", Severity.Info);
+            await RefreshCourseAsync();
+        }
+        else
+        {
+            Snackbar.Add(res?.Message ?? "Failed to update enrollment.", Severity.Error);
+        }
+    }
+
+    private async Task RefreshCourseAsync()
+    {
+        var updated = await CourseApi.GetCourseByIdAsync(Course.CourseId);
+        if (updated != null && updated.IsSuccess && updated.Data != null)
+        {
+            Course = updated.Data;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,167 @@
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Activities
+@inject IActivityApiClient ActivityApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@(IsEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.SportsEsports)" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Speaking Activity" : "Create Speaking Activity")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@_model">
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="_model.ActivityName" Label="Activity Name *" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="int" Label="Category *" @bind-Value="_model.CategoryId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        <MudSelectItem Value="1">Warm-up</MudSelectItem>
+                        <MudSelectItem Value="2">Vocabulary</MudSelectItem>
+                        <MudSelectItem Value="3">Pronunciation</MudSelectItem>
+                        <MudSelectItem Value="4">Role-Play</MudSelectItem>
+                        <MudSelectItem Value="5">Storytelling</MudSelectItem>
+                        <MudSelectItem Value="6">Game</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="Summary & Gameplay Overview *" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" Required="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_model.SuitableAgeGroup" Label="Suitable Age Group" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. 5-8 years" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" Label="Difficulty Level" @bind-Value="_model.DifficultyLevel" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="@("Easy")">Easy</MudSelectItem>
+                        <MudSelectItem Value="@("Medium")">Medium</MudSelectItem>
+                        <MudSelectItem Value="@("Hard")">Hard</MudSelectItem>
+                        <MudSelectItem Value="@("All Levels")">All Levels</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_model.DurationMinutes" Label="Duration (Mins) *" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="60" Required="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.RequiredMaterials" Label="Materials Needed" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. Soft ball, flashcards" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.ExpectedLearningOutcome" Label="Expected Speaking Outcome" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Children speak target words spontaneously" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Instructions" Label="Step-by-Step Instructions *" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="3" Required="true" />
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveActivityAsync" Disabled="@_isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Activity</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public ActivityDetailResponseModel? ExistingActivity { get; set; }
+
+    private bool IsEdit => ExistingActivity != null;
+    private CreateActivityRequestModel _model = new() { CategoryId = 6, DurationMinutes = 15, DifficultyLevel = "Easy" };
+    private bool _isSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (ExistingActivity != null)
+        {
+            _model.ActivityName = ExistingActivity.ActivityName;
+            _model.CategoryId = ExistingActivity.CategoryId;
+            _model.Description = ExistingActivity.Description;
+            _model.Instructions = ExistingActivity.Instructions;
+            _model.RequiredMaterials = ExistingActivity.RequiredMaterials;
+            _model.DurationMinutes = ExistingActivity.DurationMinutes;
+            _model.SuitableAgeGroup = ExistingActivity.SuitableAgeGroup;
+            _model.DifficultyLevel = ExistingActivity.DifficultyLevel;
+            _model.ExpectedLearningOutcome = ExistingActivity.ExpectedLearningOutcome;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveActivityAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.ActivityName) || string.IsNullOrWhiteSpace(_model.Instructions))
+        {
+            Snackbar.Add("Activity name and instructions are required.", Severity.Warning);
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            if (IsEdit)
+            {
+                var updateModel = new UpdateActivityRequestModel
+                {
+                    ActivityName = _model.ActivityName,
+                    CategoryId = _model.CategoryId,
+                    Description = _model.Description,
+                    Instructions = _model.Instructions,
+                    RequiredMaterials = _model.RequiredMaterials,
+                    DurationMinutes = _model.DurationMinutes,
+                    SuitableAgeGroup = _model.SuitableAgeGroup,
+                    DifficultyLevel = _model.DifficultyLevel,
+                    ExpectedLearningOutcome = _model.ExpectedLearningOutcome
+                };
+
+                var res = await ActivityApi.UpdateActivityAsync(ExistingActivity!.ActivityId, updateModel);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Activity updated successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update activity.", Severity.Error);
+                }
+            }
+            else
+            {
+                var res = await ActivityApi.CreateActivityAsync(_model);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Activity created successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to create activity.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

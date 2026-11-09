@@ -1,0 +1,227 @@
+@page "/lesson-plans/preview/{id:int}"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.LessonPlans
+@inject ILessonPlanApiClient LessonPlanApi
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>@(Plan?.Title ?? "Lesson Plan Preview") - LittleTalk</PageTitle>
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center pa-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (Plan == null)
+{
+    <MudAlert Severity="Severity.Error">Lesson Plan not found.</MudAlert>
+}
+else
+{
+    <div class="no-print mb-4 d-flex justify-space-between align-center">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.ArrowBack" Href="/lesson-plans">
+            Back to Lesson Plans
+        </MudButton>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" Href="@($"/lesson-plans/edit/{Plan.LessonPlanId}")">
+                Edit Plan
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintPageAsync">
+                Print Lesson Plan
+            </MudButton>
+        </div>
+    </div>
+
+    <!-- Printable Classroom Sheet -->
+    <MudPaper Elevation="1" Class="pa-8 rounded-xl print-container" Style="background-color: #FFFFFF; border: 1px solid #E2E8F0;">
+        <div class="d-flex justify-space-between align-start mb-4" style="border-bottom: 2px solid #4A90E2; padding-bottom: 16px;">
+            <div>
+                <MudText Typo="Typo.h4" Style="font-weight: 700; color: #2B6CB0;">@Plan.Title</MudText>
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 600; color: #4A5568;">Topic: @Plan.Topic</MudText>
+            </div>
+            <div class="text-right">
+                <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">@Plan.LearningLevelName</MudChip>
+                <div style="font-size: 13px; color: #718096; margin-top: 4px;">
+                    Duration: <strong>@Plan.DurationMinutes mins</strong> | Age: <strong>@Plan.AgeGroup</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meta Info Grid -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 700; color: #2D3748;">Learning Objectives</MudText>
+                <MudText Typo="Typo.body2" Style="white-space: pre-line;">@Plan.LearningObjectives</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 700; color: #2D3748;">Teaching Materials & Props</MudText>
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    @if (!Plan.Materials.Any())
+                    {
+                        <span style="font-size: 13px; color: #718096;">None specified</span>
+                    }
+                    else
+                    {
+                        @foreach (var mat in Plan.Materials)
+                        {
+                            <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                                @mat.MaterialName (@mat.MaterialType)
+                            </MudChip>
+                        }
+                    }
+                </div>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Vocabulary Section -->
+        @if (Plan.Vocabulary.Any())
+        {
+            <div class="mb-6">
+                <MudText Typo="Typo.h6" Style="font-weight: 700; color: #2B6CB0; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" Class="mb-3">
+                    Target Speaking Vocabulary (@Plan.Vocabulary.Count words)
+                </MudText>
+                <MudGrid>
+                    @foreach (var v in Plan.Vocabulary)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC; border: 1px solid #E2E8F0;">
+                                <div class="d-flex align-center justify-space-between mb-1">
+                                    <strong style="font-size: 16px; color: #2B6CB0;">@v.Word</strong>
+                                </div>
+                                @if (!string.IsNullOrEmpty(v.Pronunciation))
+                                {
+                                    <div style="font-size: 12px; font-style: italic; color: #718096;">[@v.Pronunciation]</div>
+                                }
+                                <div style="font-size: 13px; margin-top: 4px;">@v.Meaning</div>
+                                @if (!string.IsNullOrEmpty(v.ExampleSentence))
+                                {
+                                    <div style="font-size: 12px; color: #4A5568; margin-top: 2px;"><em>"@v.ExampleSentence"</em></div>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </div>
+        }
+
+        <!-- Teaching Steps Section -->
+        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #2B6CB0; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" Class="mb-3">
+            Teaching Steps & Classroom Flow
+        </MudText>
+
+        @if (!Plan.Steps.Any())
+        {
+            <MudAlert Severity="Severity.Info">No teaching steps configured for this plan.</MudAlert>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-4">
+                @foreach (var s in Plan.Steps.OrderBy(x => x.SortOrder))
+                {
+                    <MudPaper Elevation="0" Class="pa-4 rounded-xl" Style="background-color: #F8FAFC; border-left: 6px solid #4A90E2 !important; border: 1px solid #E2E8F0;">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <div class="d-flex align-center gap-2">
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">Step @s.SortOrder</MudChip>
+                                <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: #2D3748;">@s.StepName</MudText>
+                                <span class="lt-badge-soft-green" style="font-size: 12px;">@s.DurationMinutes mins</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(s.TeachingMethodName))
+                            {
+                                <MudChip T="string" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Small">
+                                    Method: @s.TeachingMethodName
+                                </MudChip>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(s.Instructions))
+                        {
+                            <div class="mb-2">
+                                <strong style="font-size: 13px; color: #4A5568;">Instructions:</strong>
+                                <div style="font-size: 14px;">@s.Instructions</div>
+                            </div>
+                        }
+
+                        <MudGrid>
+                            @if (!string.IsNullOrEmpty(s.TeacherScript))
+                            {
+                                <MudItem xs="12" sm="6">
+                                    <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #EBF8FF; border: 1px solid #BEE3F8;">
+                                        <div style="font-weight: 700; font-size: 12px; color: #2B6CB0; text-transform: uppercase;">Teacher Script / Prompt:</div>
+                                        <div style="font-size: 13px; color: #2D3748; margin-top: 2px; font-style: italic;">"@s.TeacherScript"</div>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                            @if (!string.IsNullOrEmpty(s.ExpectedStudentResponse))
+                            {
+                                <MudItem xs="12" sm="6">
+                                    <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F0FFF4; border: 1px solid #C6F6D5;">
+                                        <div style="font-weight: 700; font-size: 12px; color: #22543D; text-transform: uppercase;">Expected Student Response:</div>
+                                        <div style="font-size: 13px; color: #2D3748; margin-top: 2px; font-weight: 600;">"@s.ExpectedStudentResponse"</div>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                        </MudGrid>
+
+                        @if (Plan.Activities.Any(a => a.LessonStepId == s.LessonStepId))
+                        {
+                            <div class="mt-3 d-flex align-center gap-2">
+                                <strong style="font-size: 12px; color: #718096;">Linked Activity:</strong>
+                                @foreach (var act in Plan.Activities.Where(a => a.LessonStepId == s.LessonStepId))
+                                {
+                                    <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small" Icon="@Icons.Material.Filled.SportsEsports">
+                                        @act.ActivityName (@act.CategoryName)
+                                    </MudChip>
+                                }
+                            </div>
+                        }
+                    </MudPaper>
+                }
+            </div>
+        }
+
+        <div class="mt-8 pt-4 text-center" style="border-top: 1px dashed #CBD5E0; font-size: 11px; color: #A0AEC0;">
+            LittleTalk English Speaking Teaching Management System • Designed for Young English Learners
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private LessonPlanDetailResponseModel? Plan;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlanAsync();
+    }
+
+    private async Task LoadPlanAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await LessonPlanApi.GetLessonPlanByIdAsync(Id);
+            if (res != null && res.IsSuccess)
+            {
+                Plan = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PrintPageAsync()
+    {
+        await JS.InvokeVoidAsync("littleTalkStorage.printPage");
+    }
+}

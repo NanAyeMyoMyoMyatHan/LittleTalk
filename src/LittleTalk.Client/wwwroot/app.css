@@ -1,0 +1,83 @@
+:root {
+    --font-heading: 'Fredoka', 'Quicksand', -apple-system, sans-serif;
+    --font-body: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body, html {
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 0;
+    background-color: #F8FAFC;
+    color: #2D3748;
+}
+
+h1, h2, h3, h4, h5, h6, .mud-typography-h1, .mud-typography-h2, .mud-typography-h3, .mud-typography-h4, .mud-typography-h5, .mud-typography-h6 {
+    font-family: var(--font-heading) !important;
+    font-weight: 600;
+}
+
+/* Soft Pastel Accents */
+.lt-card {
+    border-radius: 16px !important;
+    border: 1px solid rgba(226, 232, 240, 0.8) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lt-card:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02) !important;
+}
+
+.lt-badge-soft-blue {
+    background-color: #EBF8FF !important;
+    color: #2B6CB0 !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+.lt-badge-soft-green {
+    background-color: #F0FFF4 !important;
+    color: #276749 !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+.lt-badge-soft-orange {
+    background-color: #FFFAF0 !important;
+    color: #C05621 !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+.lt-badge-soft-purple {
+    background-color: #FAF5FF !important;
+    color: #6B46C1 !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+.lt-badge-soft-pink {
+    background-color: #FFF5F5 !important;
+    color: #C53030 !important;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 4px 10px;
+}
+
+/* Custom Print Layout */
+@media print {
+    .mud-appbar, .mud-drawer, .no-print {
+        display: none !important;
+    }
+    .mud-main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .print-container {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+}

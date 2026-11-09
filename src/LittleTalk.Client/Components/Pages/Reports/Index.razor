@@ -1,0 +1,268 @@
+@page "/reports"
+@using LittleTalk.Model.Features.Reports
+@using LittleTalk.Model.Features.Students
+@inject IReportApiClient ReportApi
+@inject IStudentApiClient StudentApi
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Student Speaking Progress Report - LittleTalk</PageTitle>
+
+<div class="no-print mb-6 d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-4">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Speaking Skills Progress Report</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Comprehensive oral English proficiency analytics and criteria evaluation</MudText>
+    </div>
+    <div class="d-flex align-center gap-2">
+        <MudSelect T="int" Label="Select Student" Value="_selectedStudentId" ValueChanged="OnStudentChanged" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width: 220px;">
+            @if (_students != null)
+            {
+                @foreach (var s in _students)
+                {
+                    <MudSelectItem Value="@s.StudentId">@s.FullName (@s.StudentCode)</MudSelectItem>
+                }
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintReportAsync" Class="rounded-lg">
+            Print Report
+        </MudButton>
+    </div>
+</div>
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center pa-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (_report == null)
+{
+    <MudAlert Severity="Severity.Warning">No report data found for this student.</MudAlert>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-8 rounded-xl print-container" Style="background-color: #FFFFFF; border: 1px solid #E2E8F0;">
+        <!-- Student Header -->
+        <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center pb-6 mb-6" style="border-bottom: 2px solid #4A90E2;">
+            <div class="d-flex align-center gap-4">
+                <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 64px; height: 64px; font-size: 24px; font-weight: 700;">
+                    @(_report.FullName.Substring(0, 1).ToUpper())
+                </MudAvatar>
+                <div>
+                    <div class="d-flex align-center gap-2">
+                        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2D3748;">@_report.FullName</MudText>
+                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">@_report.CurrentLearningLevel</MudChip>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Student Code: <strong>@_report.StudentCode</strong> | Age: @_report.Age years old
+                    </MudText>
+                </div>
+            </div>
+            <div class="mt-4 mt-sm-0 text-sm-right">
+                <div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 700;">Report Date</div>
+                <strong style="color: #2D3748;">@_report.ReportGeneratedDate.ToString("MMMM dd, yyyy")</strong>
+            </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <MudGrid Class="mb-6">
+            <!-- Overall Speaking Score -->
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4 rounded-xl text-center" Style="background-color: #FFFAF0; border: 1px solid #FEEBC8;">
+                    <MudText Typo="Typo.caption" Style="color: #C05621; font-weight: 700; text-transform: uppercase;">
+                        Overall Speaking Score
+                    </MudText>
+                    <div class="d-flex justify-center align-center gap-2 my-1">
+                        <MudText Typo="Typo.h3" Style="color: #7B341E; font-weight: 700;">
+                            @(_report.OverallAverageScore > 0 ? _report.OverallAverageScore.ToString("0.0") : "N/A")
+                        </MudText>
+                        <span style="font-size: 16px; color: #A0AEC0;">/ 5.0</span>
+                    </div>
+                    @if (_report.OverallAverageScore > 0)
+                    {
+                        <MudRating SelectedValue="@((int)Math.Round(_report.OverallAverageScore))" ReadOnly="true" Color="Color.Warning" Size="Size.Small" />
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Attendance Rate -->
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4 rounded-xl text-center" Style="background-color: #F0FFF4; border: 1px solid #C6F6D5;">
+                    <MudText Typo="Typo.caption" Style="color: #22543D; font-weight: 700; text-transform: uppercase;">
+                        Attendance Record
+                    </MudText>
+                    <div class="d-flex justify-center align-center gap-2 my-1">
+                        <MudText Typo="Typo.h3" Style="color: #22543D; font-weight: 700;">
+                            @_report.AttendancePercentage.ToString("0")%
+                        </MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @_report.SessionsPresent of @_report.TotalSessionsConducted sessions attended
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Total Assessments -->
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4 rounded-xl text-center" Style="background-color: #EBF8FF; border: 1px solid #BEE3F8;">
+                    <MudText Typo="Typo.caption" Style="color: #2B6CB0; font-weight: 700; text-transform: uppercase;">
+                        Completed Assessments
+                    </MudText>
+                    <div class="d-flex justify-center align-center gap-2 my-1">
+                        <MudText Typo="Typo.h3" Style="color: #2B6CB0; font-weight: 700;">
+                            @_report.TotalAssessments
+                        </MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Speaking milestones logged
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- 6 Criteria Breakdown -->
+        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #2B6CB0; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" Class="mb-4">
+            6 Core Speaking Skills Breakdown
+        </MudText>
+
+        <MudGrid Class="mb-6">
+            @foreach (var cr in _report.CriteriaBreakdown)
+            {
+                <MudItem xs="12" sm="6">
+                    <MudPaper Elevation="0" Class="pa-4 rounded-xl" Style="background-color: #F8FAFC; border: 1px solid #E2E8F0;">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight: 700; color: #2D3748;">@cr.CriterionName</MudText>
+                            <div class="d-flex align-center gap-1">
+                                <strong style="color: #2B6CB0;">@cr.AverageScore.ToString("0.0")</strong>
+                                <span style="font-size: 11px; color: #A0AEC0;">/ 5.0</span>
+                            </div>
+                        </div>
+                        <MudProgressLinear Color="Color.Primary" Value="@((double)cr.AverageScore * 20)" Rounded="true" Size="Size.Medium" Class="mb-1" />
+                        <div style="font-size: 11px; color: #718096;">
+                            Based on @cr.EvaluationsCount evaluation records
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- Assessment Timeline / Observations -->
+        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #2B6CB0; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" Class="mb-4">
+            Teacher Observations & Speaking Milestones
+        </MudText>
+
+        @if (!_report.RecentTeacherFeedback.Any())
+        {
+            <MudAlert Severity="Severity.Info">No individual assessment notes recorded yet.</MudAlert>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-4">
+                @foreach (var ast in _report.RecentTeacherFeedback)
+                {
+                    <MudPaper Elevation="0" Class="pa-4 rounded-xl" Style="background-color: #F8FAFC; border-left: 6px solid #2EC4B6 !important; border: 1px solid #E2E8F0;">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <div>
+                                <strong style="color: #2D3748; font-size: 15px;">@(ast.LessonTitle ?? "Speaking Evaluation Session")</strong>
+                                <div style="font-size: 12px; color: #718096;">
+                                    Evaluated on @ast.Date.ToString("MMM dd, yyyy") by <strong>@ast.TeacherName</strong>
+                                </div>
+                            </div>
+                            @if (ast.OverallScore.HasValue)
+                            {
+                                <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small" Style="font-weight: 700;">
+                                    ★ @ast.OverallScore.Value.ToString("0.0")
+                                </MudChip>
+                            }
+                        </div>
+
+                        <div class="mt-2" style="font-size: 13px; color: #4A5568;">
+                            "@ast.Feedback"
+                        </div>
+                    </MudPaper>
+                }
+            </div>
+        }
+
+        <div class="mt-8 pt-4 text-center" style="border-top: 1px dashed #CBD5E0; font-size: 11px; color: #A0AEC0;">
+            LittleTalk English Speaking Teaching Management System • Official Progress Report
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    private int? StudentId { get; set; }
+
+    private int _selectedStudentId = 1;
+    private List<StudentSummaryResponseModel> _students = new();
+    private StudentProgressReportResponseModel? _report;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var stuRes = await StudentApi.GetStudentsAsync(new SearchStudentRequestModel { PageSize = 100 });
+            if (stuRes?.IsSuccess == true && stuRes.Data?.Items != null)
+            {
+                _students = stuRes.Data.Items;
+                if (!StudentId.HasValue && _students.Any())
+                {
+                    _selectedStudentId = _students.First().StudentId;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore background loading error
+        }
+
+        if (StudentId.HasValue && StudentId.Value > 0)
+        {
+            _selectedStudentId = StudentId.Value;
+        }
+        await LoadReportAsync();
+    }
+
+    private async Task OnStudentChanged(int newId)
+    {
+        _selectedStudentId = newId;
+        await LoadReportAsync();
+    }
+
+    private async Task LoadReportAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await ReportApi.GetStudentProgressReportAsync(_selectedStudentId);
+            if (res != null && res.IsSuccess)
+            {
+                _report = res.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task PrintReportAsync()
+    {
+        await JS.InvokeVoidAsync("littleTalkStorage.printPage");
+    }
+
+    private int CalculateAge(DateOnly dob)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var age = today.Year - dob.Year;
+        if (dob > today.AddYears(-age)) age--;
+        return age;
+    }
+}

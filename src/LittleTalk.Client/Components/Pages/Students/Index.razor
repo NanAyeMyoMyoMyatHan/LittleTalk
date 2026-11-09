@@ -1,0 +1,284 @@
+@page "/students"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Students
+@inject IStudentApiClient StudentApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Students Management - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Young Learners Management</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Manage student enrollments, profiles, and learning levels</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" 
+               OnClick="OpenCreateStudentDialog" Class="rounded-lg">
+        Register Student
+    </MudButton>
+</div>
+
+<!-- Filters -->
+<MudPaper Elevation="0" Class="pa-4 mb-6 rounded-xl lt-card" Style="background-color: #FFFFFF;">
+    <MudGrid>
+        <MudItem xs="12" sm="5">
+            <MudTextField @bind-Value="_searchTerm" Placeholder="Search by name or student code (e.g. STU-000001)..." 
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" 
+                          AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" OnKeyUp="@((e) => HandleSearchKey(e))" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" Label="Filter by Learning Level" @bind-Value="_selectedLevelId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem Value="@((int?)null)">All Levels</MudSelectItem>
+                <MudSelectItem Value="@((int?)1)">Beginner (4-6 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)2)">Elementary (6-8 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)3)">Pre-Intermediate (8-10 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)4)">Intermediate (10-12 yrs)</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3" Class="d-flex align-center gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadStudentsAsync" FullWidth="true">
+                Filter
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFiltersAsync">
+                Reset
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Students Table -->
+<MudPaper Elevation="0" Class="rounded-xl lt-card" Style="background-color: #FFFFFF; overflow: hidden;">
+    <MudTable Items="@_students" Loading="@_isLoading" Hover="true" Elevation="0" Dense="false">
+        <HeaderContent>
+            <MudTh>Student</MudTh>
+            <MudTh>Code</MudTh>
+            <MudTh>Level</MudTh>
+            <MudTh>Age / DOB</MudTh>
+            <MudTh>Courses</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="text-align: right;">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Student">
+                <div class="d-flex align-center gap-3">
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                        @(context.FullName.Length > 0 ? context.FullName.Substring(0, 1).ToUpper() : "?")
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">@context.FullName</MudText>
+                        @if (!string.IsNullOrEmpty(context.NickName))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">"@context.NickName"</MudText>
+                        }
+                    </div>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Code">
+                <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                    @context.StudentCode
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Level">
+                <span class="lt-badge-soft-blue">@context.LearningLevelName</span>
+            </MudTd>
+            <MudTd DataLabel="Age / DOB">
+                <div>@context.DateOfBirth.ToString("MMM dd, yyyy")</div>
+                <div style="font-size: 11px; color: #718096;">@CalculateAge(context.DateOfBirth) years old</div>
+            </MudTd>
+            <MudTd DataLabel="Courses">
+                <MudChip T="string" Color="Color.Tertiary" Variant="Variant.Filled" Size="Size.Small">
+                    @context.ActiveEnrollmentsCount Active
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsActive)
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Outlined">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Outlined">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions" Style="text-align: right;">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Small" 
+                                OnClick="@(() => OpenStudentDetailsAsync(context.StudentId))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" 
+                                OnClick="@(() => OpenEditStudentDialogAsync(context.StudentId))" />
+                <MudIconButton Icon="@Icons.Material.Filled.ShowChart" Color="Color.Tertiary" Size="Size.Small" 
+                                OnClick="@(() => Nav.NavigateTo($"/reports?studentId={context.StudentId}"))" />
+                <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Color="Color.Error" Size="Size.Small" 
+                                OnClick="@(() => DeleteStudentAsync(context.StudentId, context.FullName))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <div class="pa-8 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.SentimentDissatisfied" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                <MudText Typo="Typo.h6">No students found</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Try adjusting your filters or register a new student.</MudText>
+            </div>
+        </NoRecordsContent>
+    </MudTable>
+
+    <!-- Pagination -->
+    <div class="pa-4 d-flex justify-space-between align-center">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Showing @_students.Count of @_totalCount students
+        </MudText>
+        <MudPagination Color="Color.Primary" Count="@_totalPages" Selected="@_currentPage" SelectedChanged="OnPageChanged" />
+    </div>
+</MudPaper>
+
+@code {
+    private List<StudentSummaryResponseModel> _students = new();
+    private bool _isLoading = true;
+    private string? _searchTerm;
+    private int? _selectedLevelId;
+    private int _currentPage = 1;
+    private int _pageSize = 10;
+    private int _totalCount = 0;
+    private int _totalPages => Math.Max(1, (int)Math.Ceiling((double)_totalCount / _pageSize));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStudentsAsync();
+    }
+
+    private async Task LoadStudentsAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var request = new SearchStudentRequestModel
+            {
+                PageNumber = _currentPage,
+                PageSize = _pageSize,
+                SearchTerm = _searchTerm,
+                LevelId = _selectedLevelId
+            };
+
+            var res = await StudentApi.GetStudentsAsync(request);
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _students = res.Data.Items.ToList();
+                _totalCount = res.Data.TotalCount;
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to load students.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load students: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        _searchTerm = null;
+        _selectedLevelId = null;
+        _currentPage = 1;
+        await LoadStudentsAsync();
+    }
+
+    private async Task HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _currentPage = 1;
+            await LoadStudentsAsync();
+        }
+    }
+
+    private async Task OnPageChanged(int newPage)
+    {
+        _currentPage = newPage;
+        await LoadStudentsAsync();
+    }
+
+    private async Task OpenCreateStudentDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StudentDialog>("Register New Student", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStudentsAsync();
+        }
+    }
+
+    private async Task OpenEditStudentDialogAsync(int studentId)
+    {
+        var res = await StudentApi.GetStudentByIdAsync(studentId);
+        if (res == null || !res.IsSuccess || res.Data == null)
+        {
+            Snackbar.Add(res?.Message ?? "Could not load student details.", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["ExistingStudent"] = res.Data };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StudentDialog>("Edit Student", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadStudentsAsync();
+        }
+    }
+
+    private async Task OpenStudentDetailsAsync(int studentId)
+    {
+        var res = await StudentApi.GetStudentByIdAsync(studentId);
+        if (res == null || !res.IsSuccess || res.Data == null)
+        {
+            Snackbar.Add(res?.Message ?? "Could not load student details.", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["Student"] = res.Data };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        await DialogService.ShowAsync<StudentDetailsDialog>("Student Profile", parameters, options);
+    }
+
+    private async Task DeleteStudentAsync(int studentId, string name)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Deactivate Student",
+            ["Message"] = $"Are you sure you want to deactivate {name}? Historical records will be preserved.",
+            ["ConfirmText"] = "Deactivate",
+            ["Color"] = Color.Error
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Deactivate Student", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var res = await StudentApi.DeleteStudentAsync(studentId);
+            if (res != null && res.IsSuccess)
+            {
+                Snackbar.Add($"{name} has been deactivated.", Severity.Info);
+                await LoadStudentsAsync();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to deactivate student.", Severity.Error);
+            }
+        }
+    }
+
+    private int CalculateAge(DateOnly dob)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var age = today.Year - dob.Year;
+        if (dob > today.AddYears(-age)) age--;
+        return age;
+    }
+}

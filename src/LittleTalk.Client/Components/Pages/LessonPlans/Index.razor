@@ -1,0 +1,235 @@
+@page "/lesson-plans"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.LessonPlans
+@inject ILessonPlanApiClient LessonPlanApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Lesson Plans - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Lesson Plan Library</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Curriculum lesson plans with structured teaching steps, vocabulary, and methods</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+               Href="/lesson-plans/create" Class="rounded-lg">
+        Create Lesson Plan
+    </MudButton>
+</div>
+
+<!-- Filters -->
+<MudPaper Elevation="0" Class="pa-4 mb-6 rounded-xl lt-card" Style="background-color: #FFFFFF;">
+    <MudGrid>
+        <MudItem xs="12" sm="5">
+            <MudTextField @bind-Value="_searchTerm" Placeholder="Search by title, topic, or objectives..." 
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" 
+                          AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" OnKeyUp="@((e) => HandleSearchKey(e))" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" Label="Filter by Learning Level" @bind-Value="_selectedLevelId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem Value="@((int?)null)">All Levels</MudSelectItem>
+                <MudSelectItem Value="@((int?)1)">Beginner (4-6 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)2)">Elementary (6-8 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)3)">Pre-Intermediate (8-10 yrs)</MudSelectItem>
+                <MudSelectItem Value="@((int?)4)">Intermediate (10-12 yrs)</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3" Class="d-flex align-center gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadPlansAsync" FullWidth="true">
+                Filter
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFiltersAsync">
+                Reset
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Plans Grid -->
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center pa-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (!_plans.Any())
+{
+    <MudPaper Elevation="0" Class="pa-12 text-center rounded-xl lt-card" Style="background-color: #FFFFFF;">
+        <MudIcon Icon="@Icons.Material.Filled.AutoStories" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
+        <MudText Typo="Typo.h6">No lesson plans found</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">Create your first lesson plan with steps and vocabulary.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Href="/lesson-plans/create" Class="rounded-lg">
+            Create First Lesson Plan
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudGrid>
+        @foreach (var p in _plans)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="0" Class="rounded-xl lt-card h-100 d-flex flex-column" Style="background-color: #FFFFFF; border: 1px solid rgba(226, 232, 240, 0.8);">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                                @(p.Title.Length > 0 ? p.Title.Substring(0, 1).ToUpper() : "L")
+                            </MudAvatar>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">@p.Title</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Topic: @p.Topic</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudChip T="string" Color="@(p.Status == "Approved" ? Color.Success : (p.Status == "Review" ? Color.Warning : Color.Default))" Size="Size.Small" Variant="Variant.Filled">
+                                @p.Status
+                            </MudChip>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        <div class="d-flex align-center gap-2 mb-3">
+                            <span class="lt-badge-soft-blue">@p.LearningLevelName</span>
+                            <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                                @p.DurationMinutes Mins
+                            </MudChip>
+                            <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined" Size="Size.Small">
+                                @p.AgeGroup
+                            </MudChip>
+                        </div>
+
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 text-truncate-2">
+                            @(string.IsNullOrEmpty(p.Description) ? "No summary description." : p.Description)
+                        </MudText>
+
+                        <div class="d-flex justify-space-between align-center" style="font-size: 12px; color: #718096;">
+                            <span>Steps: <strong>@p.StepsCount</strong></span>
+                            <span>Vocabulary: <strong>@p.VocabularyCount</strong></span>
+                            <span>Course: <strong>@(p.CourseName ?? "Standalone")</strong></span>
+                        </div>
+                    </MudCardContent>
+                    <MudDivider />
+                    <MudCardActions Class="pa-3 d-flex justify-space-between align-center">
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Visibility" 
+                                   Href="@($"/lesson-plans/preview/{p.LessonPlanId}")">
+                            View Plan
+                        </MudButton>
+                        <div>
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default" Size="Size.Small" 
+                                           OnClick="@(() => OpenDuplicateDialog(p.LessonPlanId, p.Title))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" 
+                                           Href="@($"/lesson-plans/edit/{p.LessonPlanId}")" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Archive" Color="Color.Warning" Size="Size.Small" 
+                                           OnClick="@(() => DeletePlanAsync(p.LessonPlanId, p.Title))" />
+                        </div>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<LessonPlanSummaryResponseModel> _plans = new();
+    private bool _isLoading = true;
+    private string? _searchTerm;
+    private int? _selectedLevelId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlansAsync();
+    }
+
+    private async Task LoadPlansAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var request = new SearchLessonPlanRequestModel
+            {
+                PageNumber = 1,
+                PageSize = 50,
+                SearchTerm = _searchTerm,
+                LearningLevelId = _selectedLevelId
+            };
+
+            var res = await LessonPlanApi.GetLessonPlansAsync(request);
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _plans = res.Data.Items.ToList();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to load lesson plans.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load lesson plans: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        _searchTerm = null;
+        _selectedLevelId = null;
+        await LoadPlansAsync();
+    }
+
+    private async Task HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadPlansAsync();
+        }
+    }
+
+    private async Task OpenDuplicateDialog(int planId, string title)
+    {
+        var parameters = new DialogParameters
+        {
+            ["LessonPlanId"] = planId,
+            ["SourceTitle"] = title
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<DuplicateLessonPlanDialog>("Duplicate Lesson Plan", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadPlansAsync();
+        }
+    }
+
+    private async Task DeletePlanAsync(int planId, string title)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Archive Lesson Plan",
+            ["Message"] = $"Are you sure you want to archive '{title}'? Existing historical sessions referencing this plan will remain valid.",
+            ["ConfirmText"] = "Archive",
+            ["Color"] = Color.Warning
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Archive Lesson Plan", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var res = await LessonPlanApi.DeleteLessonPlanAsync(planId);
+            if (res != null && res.IsSuccess)
+            {
+                Snackbar.Add("Lesson plan archived.", Severity.Info);
+                await LoadPlansAsync();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to archive lesson plan.", Severity.Error);
+            }
+        }
+    }
+}

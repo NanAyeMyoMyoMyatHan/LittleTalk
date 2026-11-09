@@ -1,0 +1,196 @@
+@using LittleTalk.Model.Features.Attendance
+@inject IAttendanceApiClient AttendanceApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.EventAvailable" Color="Color.Success" />
+            <div>
+                <MudText Typo="Typo.h6">Attendance: @Session.CourseName</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Session Date: @Session.SessionDate.ToString("MMM dd, yyyy") | Teacher: @Session.TeacherName
+                </MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">Student Roster (@_records.Count)</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small" 
+                       StartIcon="@Icons.Material.Filled.DoneAll" OnClick="MarkAllPresent">
+                Mark All Present
+            </MudButton>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="d-flex justify-center align-center pa-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (!_records.Any())
+        {
+            <MudAlert Severity="Severity.Warning">No active students enrolled in this course.</MudAlert>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3">
+                @foreach (var rec in _records)
+                {
+                    <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC; border: 1px solid #E2E8F0;">
+                        <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center gap-2">
+                            <div class="d-flex align-center gap-2">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                    @(string.IsNullOrEmpty(rec.StudentName) ? "S" : rec.StudentName.Substring(0, 1).ToUpper())
+                                </MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 700;">@rec.StudentName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@rec.StudentCode</MudText>
+                                </div>
+                            </div>
+
+                            <!-- Status Selector Toggle Buttons -->
+                            <div class="d-flex gap-1 flex-wrap">
+                                <MudButton Variant="@(rec.Status == "Present" ? Variant.Filled : Variant.Outlined)" 
+                                           Color="Color.Success" Size="Size.Small" OnClick="@(() => rec.Status = "Present")">
+                                    Present
+                                </MudButton>
+                                <MudButton Variant="@(rec.Status == "Late" ? Variant.Filled : Variant.Outlined)" 
+                                           Color="Color.Warning" Size="Size.Small" OnClick="@(() => rec.Status = "Late")">
+                                    Late
+                                </MudButton>
+                                <MudButton Variant="@(rec.Status == "Absent" ? Variant.Filled : Variant.Outlined)" 
+                                           Color="Color.Error" Size="Size.Small" OnClick="@(() => rec.Status = "Absent")">
+                                    Absent
+                                </MudButton>
+                                <MudButton Variant="@(rec.Status == "Excused" ? Variant.Filled : Variant.Outlined)" 
+                                           Color="Color.Default" Size="Size.Small" OnClick="@(() => rec.Status = "Excused")">
+                                    Excused
+                                </MudButton>
+                            </div>
+                        </div>
+
+                        <MudTextField @bind-Value="rec.Remarks" Placeholder="Optional remarks (e.g. participated enthusiastically, arrived 10 mins late)..." 
+                                      Variant="Variant.Text" Margin="Margin.Dense" Class="mt-2" />
+                    </MudPaper>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="SaveAttendanceAsync" Disabled="@(_isSaving || !_records.Any())">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Submit Attendance</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public ClassSessionResponseModel Session { get; set; } = null!;
+
+    private List<AttendanceItemModel> _records = new();
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+
+    private class AttendanceItemModel
+    {
+        public int StudentId { get; set; }
+        public string StudentCode { get; set; } = string.Empty;
+        public string StudentName { get; set; } = string.Empty;
+        public string Status { get; set; } = "Present";
+        public string? Remarks { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRosterAsync();
+    }
+
+    private async Task LoadRosterAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var res = await AttendanceApi.GetSessionByIdAsync(Session.SessionId);
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _records = res.Data.Roster.Select(x => new AttendanceItemModel
+                {
+                    StudentId = x.StudentId,
+                    StudentCode = x.StudentCode,
+                    StudentName = x.FullName,
+                    Status = x.AttendanceStatus ?? "Present",
+                    Remarks = x.Remarks
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading roster: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void MarkAllPresent()
+    {
+        foreach (var r in _records)
+        {
+            r.Status = "Present";
+        }
+        Snackbar.Add("All students marked as Present.", Severity.Info);
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveAttendanceAsync()
+    {
+        _isSaving = true;
+        try
+        {
+            var batchRequest = new BatchRecordAttendanceRequestModel
+            {
+                Records = _records.Select(r => new StudentAttendanceRecordItemModel
+                {
+                    StudentId = r.StudentId,
+                    Status = r.Status,
+                    Remarks = r.Remarks
+                }).ToList()
+            };
+
+            var res = await AttendanceApi.BatchRecordAttendanceAsync(Session.SessionId, batchRequest);
+            if (res != null && res.IsSuccess)
+            {
+                Snackbar.Add("Attendance recorded successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save attendance.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

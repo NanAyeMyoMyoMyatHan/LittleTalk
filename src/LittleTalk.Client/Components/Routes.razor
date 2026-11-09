@@ -1,0 +1,40 @@
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center justify-center pt-16">
+                        <MudPaper Elevation="3" Class="pa-8 text-center rounded-xl" Style="max-width: 450px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" Size="Size.Large" Class="mb-4" />
+                            <MudText Typo="Typo.h5" GutterBottom="true">Access Restricted</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+                                You do not have permission to view this page or your session has expired.
+                            </MudText>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login" StartIcon="@Icons.Material.Filled.Login">
+                                Go to Sign In
+                            </MudButton>
+                        </MudPaper>
+                    </MudContainer>
+                </NotAuthorized>
+                <Authorizing>
+                    <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center align-center pt-16">
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                    </MudContainer>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="typeof(Layout.MainLayout)">
+                <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center justify-center pt-16">
+                    <MudPaper Elevation="2" Class="pa-8 text-center rounded-xl">
+                        <MudIcon Icon="@Icons.Material.Filled.SentimentDissatisfied" Color="Color.Secondary" Size="Size.Large" Class="mb-4" />
+                        <MudText Typo="Typo.h5" GutterBottom="true">Page Not Found</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-6">Sorry, there's nothing at this address.</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Back to Dashboard</MudButton>
+                    </MudPaper>
+                </MudContainer>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

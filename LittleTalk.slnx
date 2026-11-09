@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LittleTalk.Api/LittleTalk.Api.csproj" />
+    <Project Path="src/LittleTalk.Application/LittleTalk.Application.csproj" />
+    <Project Path="src/LittleTalk.Infrastructure/LittleTalk.Infrastructure.csproj" />
+  </Folder>
+</Solution>

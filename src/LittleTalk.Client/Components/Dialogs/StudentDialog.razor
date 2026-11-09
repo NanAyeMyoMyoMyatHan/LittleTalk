@@ -1,0 +1,191 @@
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Students
+@inject IStudentApiClient StudentApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@(IsEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.PersonAdd)" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Student Details" : "Register New Young Learner")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@_formModel">
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="_formModel.FullName" Label="Full Name *" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_formModel.NickName" Label="Nickname / Preferred Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Date of Birth *" @bind-Date="_birthDate" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                                   DateFormat="yyyy-MM-dd" MaxDate="DateTime.Today" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Gender" @bind-Value="_formModel.Gender" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="@("Boy")">Boy</MudSelectItem>
+                        <MudSelectItem Value="@("Girl")">Girl</MudSelectItem>
+                        <MudSelectItem Value="@("Prefer not to say")">Prefer not to say</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Learning Level *" @bind-Value="_formModel.LearningLevelId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        <MudSelectItem Value="1">Beginner (Little Explorers, Age 4-6)</MudSelectItem>
+                        <MudSelectItem Value="2">Elementary (Word Adventurers, Age 6-8)</MudSelectItem>
+                        <MudSelectItem Value="3">Pre-Intermediate (Sentence Builders, Age 8-10)</MudSelectItem>
+                        <MudSelectItem Value="4">Intermediate (Confident Speakers, Age 10-12)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formModel.ProfileImageUrl" Label="Avatar / Photo URL" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Style="font-weight: 700;" Color="Color.Primary">Parent / Guardian Information</MudText>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formModel.ParentName" Label="Parent / Guardian Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_formModel.ParentContact" Label="Parent Phone / Email" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_formModel.Notes" Label="Emergency Notes / Allergies / Special Needs" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
+                </MudItem>
+
+                @if (IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSwitch @bind-Value="_isActive" Color="Color.Success" Label="Student is currently Active" />
+                    </MudItem>
+                }
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveStudentAsync" Disabled="@_isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Student</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public StudentDetailResponseModel? ExistingStudent { get; set; }
+
+    private bool IsEdit => ExistingStudent != null;
+    private CreateStudentRequestModel _formModel = new() { LearningLevelId = 1 };
+    private DateTime? _birthDate = DateTime.Today.AddYears(-7);
+    private bool _isActive = true;
+    private bool _isSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (ExistingStudent != null)
+        {
+            _formModel.FullName = ExistingStudent.FullName;
+            _formModel.NickName = ExistingStudent.NickName;
+            _formModel.Gender = ExistingStudent.Gender;
+            _formModel.LearningLevelId = ExistingStudent.LearningLevelId;
+            _formModel.ParentName = ExistingStudent.ParentName;
+            _formModel.ParentContact = ExistingStudent.ParentContact;
+            _formModel.Notes = ExistingStudent.Notes;
+            _formModel.ProfileImageUrl = ExistingStudent.ProfileImageUrl;
+            _birthDate = ExistingStudent.DateOfBirth.ToDateTime(TimeOnly.MinValue);
+            _isActive = ExistingStudent.IsActive;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveStudentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_formModel.FullName))
+        {
+            Snackbar.Add("Student full name is required.", Severity.Warning);
+            return;
+        }
+
+        if (!_birthDate.HasValue)
+        {
+            Snackbar.Add("Date of birth is required.", Severity.Warning);
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            var dob = DateOnly.FromDateTime(_birthDate.Value);
+
+            if (IsEdit)
+            {
+                var updateModel = new UpdateStudentRequestModel
+                {
+                    FullName = _formModel.FullName,
+                    NickName = _formModel.NickName,
+                    DateOfBirth = dob,
+                    Gender = _formModel.Gender,
+                    LearningLevelId = _formModel.LearningLevelId,
+                    ProfileImageUrl = _formModel.ProfileImageUrl,
+                    ParentName = _formModel.ParentName,
+                    ParentContact = _formModel.ParentContact,
+                    Notes = _formModel.Notes,
+                    IsActive = _isActive
+                };
+
+                var res = await StudentApi.UpdateStudentAsync(ExistingStudent!.StudentId, updateModel);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Student updated successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update student.", Severity.Error);
+                }
+            }
+            else
+            {
+                _formModel.DateOfBirth = dob;
+                var res = await StudentApi.CreateStudentAsync(_formModel);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add($"Student registered successfully! Code: {res.Data?.StudentCode}", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to register student.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

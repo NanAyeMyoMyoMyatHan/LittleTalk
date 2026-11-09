@@ -1,0 +1,108 @@
+@using LittleTalk.Model.Features.Students
+@inject NavigationManager Nav
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                @(Student.FullName.Length > 0 ? Student.FullName.Substring(0, 1).ToUpper() : "?")
+            </MudAvatar>
+            <div>
+                <MudText Typo="Typo.h6">@Student.FullName</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Code: @Student.StudentCode</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <!-- Basic Info -->
+            <MudItem xs="12" sm="6">
+                <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Learning Level</MudText>
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">@Student.LearningLevelName</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Date of Birth / Age</MudText>
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">
+                        @Student.DateOfBirth.ToString("MMM dd, yyyy") (@CalculateAge(Student.DateOfBirth) yrs)
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Parent Info -->
+            <MudItem xs="12" sm="6">
+                <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Parent / Guardian</MudText>
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">@(Student.ParentName ?? "Not specified")</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Parent Contact</MudText>
+                    <MudText Typo="Typo.body1" Style="font-weight: 600;">@(Student.ParentContact ?? "Not specified")</MudText>
+                </MudPaper>
+            </MudItem>
+
+            @if (!string.IsNullOrEmpty(Student.Notes))
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="rounded-lg">
+                        <strong>Special Notes / Allergies:</strong> @Student.Notes
+                    </MudAlert>
+                </MudItem>
+            }
+
+            <!-- Enrolled Courses -->
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 700;" Class="mt-2 mb-1">Enrolled Courses (@Student.Enrollments.Count)</MudText>
+                @if (!Student.Enrollments.Any())
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Not currently enrolled in any course.</MudText>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var en in Student.Enrollments)
+                        {
+                            <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">
+                                @en.CourseName (@en.Status)
+                            </MudChip>
+                        }
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" StartIcon="@Icons.Material.Filled.ShowChart" OnClick="OpenReport">
+            View Speaking Progress Report
+        </MudButton>
+        <MudButton Color="Color.Primary" OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public StudentDetailResponseModel Student { get; set; } = null!;
+
+    private void Close() => MudDialog.Close();
+
+    private void OpenReport()
+    {
+        MudDialog.Close();
+        Nav.NavigateTo($"/reports?studentId={Student.StudentId}");
+    }
+
+    private int CalculateAge(DateOnly dob)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var age = today.Year - dob.Year;
+        if (dob > today.AddYears(-age)) age--;
+        return age;
+    }
+}

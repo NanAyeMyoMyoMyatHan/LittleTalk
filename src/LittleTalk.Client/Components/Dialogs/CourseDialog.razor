@@ -1,0 +1,165 @@
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Courses
+@inject ICourseApiClient CourseApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@(IsEdit ? Icons.Material.Filled.Edit : Icons.Material.Filled.LibraryAdd)" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">@(IsEdit ? "Edit Course" : "Create New Speaking Course")</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@_model">
+            <MudGrid>
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="_model.CourseName" Label="Course Title *" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudTextField @bind-Value="_model.CourseCode" Label="Course Code *" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" Disabled="@IsEdit" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" Label="Description & Objectives" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Target Learning Level *" @bind-Value="_model.LearningLevelId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        <MudSelectItem Value="1">Beginner (Little Explorers, Age 4-6)</MudSelectItem>
+                        <MudSelectItem Value="2">Elementary (Word Adventurers, Age 6-8)</MudSelectItem>
+                        <MudSelectItem Value="3">Pre-Intermediate (Sentence Builders, Age 8-10)</MudSelectItem>
+                        <MudSelectItem Value="4">Intermediate (Confident Speakers, Age 10-12)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_model.DurationWeeks" Label="Duration (Weeks) *" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="52" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="_model.MaxStudents" Label="Max Students *" Variant="Variant.Outlined" Margin="Margin.Dense" Min="1" Max="30" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string" Label="Status *" @bind-Value="_model.Status" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        <MudSelectItem Value="@("Upcoming")">Upcoming</MudSelectItem>
+                        <MudSelectItem Value="@("Active")">Active</MudSelectItem>
+                        <MudSelectItem Value="@("Archived")">Archived</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @if (!IsEdit)
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="int?" Label="Assign Initial Lead Teacher" @bind-Value="_initialTeacherId" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@((int?)null)">None (Assign Later)</MudSelectItem>
+                            <MudSelectItem Value="@((int?)2)">Teacher Sarah Jenkins</MudSelectItem>
+                            <MudSelectItem Value="@((int?)3)">Teacher David Miller</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                }
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveCourseAsync" Disabled="@_isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Course</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public CourseDetailResponseModel? ExistingCourse { get; set; }
+
+    private bool IsEdit => ExistingCourse != null;
+    private CreateCourseRequestModel _model = new() { Status = "Active", DurationWeeks = 10, MaxStudents = 12, LearningLevelId = 1 };
+    private int? _initialTeacherId = 2;
+    private bool _isSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (ExistingCourse != null)
+        {
+            _model.CourseName = ExistingCourse.CourseName;
+            _model.CourseCode = ExistingCourse.CourseCode;
+            _model.Description = ExistingCourse.Description;
+            _model.LearningLevelId = ExistingCourse.LearningLevelId;
+            _model.DurationWeeks = ExistingCourse.DurationWeeks;
+            _model.MaxStudents = ExistingCourse.MaxStudents;
+            _model.Status = ExistingCourse.Status;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveCourseAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.CourseName) || string.IsNullOrWhiteSpace(_model.CourseCode))
+        {
+            Snackbar.Add("Course name and course code are required.", Severity.Warning);
+            return;
+        }
+
+        _isSaving = true;
+        try
+        {
+            if (IsEdit)
+            {
+                var updateModel = new UpdateCourseRequestModel
+                {
+                    CourseName = _model.CourseName,
+                    Description = _model.Description,
+                    LearningLevelId = _model.LearningLevelId,
+                    DurationWeeks = _model.DurationWeeks,
+                    MaxStudents = _model.MaxStudents,
+                    Status = _model.Status
+                };
+
+                var res = await CourseApi.UpdateCourseAsync(ExistingCourse!.CourseId, updateModel);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Course updated successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to update course.", Severity.Error);
+                }
+            }
+            else
+            {
+                _model.PrimaryTeacherId = _initialTeacherId;
+                var res = await CourseApi.CreateCourseAsync(_model);
+                if (res != null && res.IsSuccess)
+                {
+                    Snackbar.Add("Course created successfully!", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(res?.Message ?? "Failed to create course.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

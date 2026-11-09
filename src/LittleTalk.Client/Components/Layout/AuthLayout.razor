@@ -1,0 +1,48 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
+<MudSnackbarProvider />
+
+<div class="d-flex justify-center px-4 py-8 py-md-12" 
+     style="min-height: 100vh; overflow-y: auto; background: linear-gradient(135deg, #EBF8FF 0%, #FAF5FF 50%, #FFF5F5 100%);">
+    <div class="d-flex align-center justify-center w-100 my-auto py-4">
+        @Body
+    </div>
+</div>
+
+@code {
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#4A90E2",         // Friendly Sky Blue
+            Secondary = "#FF6B6B",       // Warm Coral
+            Tertiary = "#2EC4B6",        // Fresh Mint
+            Info = "#38B2AC",            // Teal
+            Success = "#38A169",         // Grass Green
+            Warning = "#ED8936",         // Cheerful Orange
+            Error = "#E53E3E",           // Soft Red
+            Background = "#F8FAFC",
+            Surface = "#FFFFFF",
+            ActionDefault = "#718096"
+        },
+        LayoutProperties = new LayoutProperties()
+        {
+            DefaultBorderRadius = "14px"
+        },
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Quicksand", "Roboto", "Helvetica", "Arial", "sans-serif" }
+            },
+            H5 = new H5Typography()
+            {
+                FontFamily = new[] { "Fredoka", "Quicksand", "sans-serif" },
+                FontWeight = "600"
+            }
+        }
+    };
+}

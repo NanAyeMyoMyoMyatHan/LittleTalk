@@ -1,0 +1,237 @@
+@using LittleTalk.Model.Features.Assessments
+@using LittleTalk.Model.Features.Students
+@using LittleTalk.Model.Features.Attendance
+@using LittleTalk.Model.Features.LessonPlans
+@inject IAssessmentApiClient AssessmentApi
+@inject IStudentApiClient StudentApi
+@inject IAttendanceApiClient AttendanceApi
+@inject ILessonPlanApiClient LessonPlanApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.StarRate" Color="Color.Warning" />
+            <MudText Typo="Typo.h6">Record Child Speaking Assessment</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@_model">
+            <MudGrid>
+                <!-- Student & Session Selection -->
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" Label="Student *" @bind-Value="_model.StudentId" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true">
+                        @if (_students != null)
+                        {
+                            @foreach (var s in _students)
+                            {
+                                <MudSelectItem Value="@s.StudentId">@s.FullName (@s.StudentCode)</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int?" Label="Class Session" @bind-Value="_model.SessionId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                        <MudSelectItem Value="@((int?)null)">None (General Assessment)</MudSelectItem>
+                        @if (_sessions != null)
+                        {
+                            @foreach (var sess in _sessions)
+                            {
+                                <MudSelectItem Value="@((int?)sess.SessionId)">@sess.CourseName - @sess.SessionDate.ToString("MMM dd")</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int?" Label="Lesson Plan Topic" @bind-Value="_model.LessonPlanId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                        <MudSelectItem Value="@((int?)null)">None</MudSelectItem>
+                        @if (_lessonPlans != null)
+                        {
+                            @foreach (var lp in _lessonPlans)
+                            {
+                                <MudSelectItem Value="@((int?)lp.LessonPlanId)">@lp.Title (@lp.AgeGroup)</MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Assessment Date *" @bind-Date="_assessmentDate" Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="yyyy-MM-dd" Required="true" />
+                </MudItem>
+
+                <!-- Core 6 Speaking Criteria -->
+                <MudItem xs="12">
+                    <div class="d-flex justify-space-between align-center my-2">
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 700; color: #2B6CB0;">
+                            6 Core Speaking Dimensions (1–5 Stars)
+                        </MudText>
+                        <div class="d-flex align-center gap-1">
+                            <span style="font-size: 13px; color: #718096;">Live Average:</span>
+                            <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small" Style="font-weight: 700;">
+                                @CalculateLiveAverage().ToString("0.00") / 5.0
+                            </MudChip>
+                        </div>
+                    </div>
+                </MudItem>
+
+                @foreach (var c in _criteria)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudPaper Elevation="0" Class="pa-3 rounded-lg" Style="background-color: #F8FAFC; border: 1px solid #E2E8F0;">
+                            <div class="d-flex justify-space-between align-center mb-1">
+                                <MudText Typo="Typo.body2" Style="font-weight: 700;">@c.Name</MudText>
+                                <MudRating @bind-SelectedValue="c.Score" MaxValue="5" Color="Color.Warning" Size="Size.Small" />
+                            </div>
+                            <MudTextField @bind-Value="c.Notes" Placeholder="@c.Placeholder" 
+                                          Variant="Variant.Text" Margin="Margin.Dense" Style="font-size: 12px;" />
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                <!-- Qualitative Observations -->
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Strengths" Label="Speaking Strengths & Highlights" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" 
+                                  Placeholder="e.g. Great enthusiasm, remembers all family words readily." />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.AreasForImprovement" Label="Areas for Growth & Next Steps" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" 
+                                  Placeholder="e.g. Encourage speaking in full sentences rather than single words." />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.GeneralFeedback" Label="General Teacher Feedback & Note to Parents" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" 
+                                  Placeholder="Wonderful progress today! Keep practicing English greeting songs at home." />
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAssessmentAsync" Disabled="@_isSaving">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Record Assessment</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public int? InitialStudentId { get; set; }
+
+    private CreateAssessmentRequestModel _model = new() { StudentId = 1, Status = "Completed" };
+    private DateTime? _assessmentDate = DateTime.Today;
+    private bool _isSaving = false;
+
+    private List<StudentSummaryResponseModel> _students = new();
+    private List<ClassSessionResponseModel> _sessions = new();
+    private List<LessonPlanSummaryResponseModel> _lessonPlans = new();
+
+    private class CriterionFormItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Score { get; set; } = 4;
+        public string Placeholder { get; set; } = string.Empty;
+        public string? Notes { get; set; }
+    }
+
+    private List<CriterionFormItem> _criteria = new()
+    {
+        new() { Name = "Vocabulary", Score = 4, Placeholder = "Vocabulary notes (word recall, accuracy)..." },
+        new() { Name = "Pronunciation", Score = 4, Placeholder = "Pronunciation notes (clarity, phonics)..." },
+        new() { Name = "Sentence Formation", Score = 3, Placeholder = "Sentence notes (grammar, word order)..." },
+        new() { Name = "Fluency", Score = 4, Placeholder = "Fluency notes (rhythm, hesitation)..." },
+        new() { Name = "Listening and Responding", Score = 5, Placeholder = "Comprehension & response notes..." },
+        new() { Name = "Confidence", Score = 5, Placeholder = "Engagement, eye contact, voice volume..." }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (InitialStudentId.HasValue)
+        {
+            _model.StudentId = InitialStudentId.Value;
+        }
+
+        try
+        {
+            var stuRes = await StudentApi.GetStudentsAsync(new SearchStudentRequestModel { PageSize = 100 });
+            if (stuRes?.IsSuccess == true && stuRes.Data?.Items != null)
+            {
+                _students = stuRes.Data.Items;
+                if (_students.Any() && _model.StudentId == 0)
+                {
+                    _model.StudentId = _students.First().StudentId;
+                }
+            }
+
+            var sessRes = await AttendanceApi.GetSessionsAsync(new SearchClassSessionRequestModel { PageSize = 100 });
+            if (sessRes?.IsSuccess == true && sessRes.Data?.Items != null)
+            {
+                _sessions = sessRes.Data.Items;
+            }
+
+            var lpRes = await LessonPlanApi.GetLessonPlansAsync(new SearchLessonPlanRequestModel { PageSize = 100 });
+            if (lpRes?.IsSuccess == true && lpRes.Data?.Items != null)
+            {
+                _lessonPlans = lpRes.Data.Items;
+            }
+        }
+        catch
+        {
+            // Ignore background loading errors
+        }
+    }
+
+    private double CalculateLiveAverage()
+    {
+        if (!_criteria.Any()) return 0;
+        return _criteria.Average(c => c.Score);
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveAssessmentAsync()
+    {
+        _isSaving = true;
+        try
+        {
+            _model.AssessmentDate = (_assessmentDate ?? DateTime.Today).ToUniversalTime();
+            _model.Criteria = _criteria.Select(c => new CriterionScoreInputModel
+            {
+                CriterionName = c.Name,
+                Score = c.Score,
+                Notes = c.Notes
+            }).ToList();
+
+            var res = await AssessmentApi.CreateAssessmentAsync(_model);
+            if (res != null && res.IsSuccess)
+            {
+                Snackbar.Add("Speaking assessment recorded successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to save assessment.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

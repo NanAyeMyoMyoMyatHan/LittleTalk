@@ -1,0 +1,253 @@
+@page "/activities"
+@using LittleTalk.Client.Services.Features
+@using LittleTalk.Model.Features.Activities
+@inject IActivityApiClient ActivityApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Speaking Activities - LittleTalk</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-6">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight: 700; color: #2B6CB0;">Speaking Activities & Games</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Engaging oral English games, warm-ups, and interactive speech exercises</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" 
+               OnClick="OpenCreateActivityDialog" Class="rounded-lg">
+        Add Activity
+    </MudButton>
+</div>
+
+<!-- Filters -->
+<MudPaper Elevation="0" Class="pa-4 mb-6 rounded-xl lt-card" Style="background-color: #FFFFFF;">
+    <MudGrid>
+        <MudItem xs="12" sm="5">
+            <MudTextField @bind-Value="_searchTerm" Placeholder="Search by activity name or instructions..." 
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" 
+                          AdornmentIcon="@Icons.Material.Filled.Search" Clearable="true" OnKeyUp="@((e) => HandleSearchKey(e))" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect T="int?" Label="Filter by Category" @bind-Value="_selectedCategoryId" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem Value="@((int?)null)">All Categories</MudSelectItem>
+                <MudSelectItem Value="@((int?)1)">Warm-up</MudSelectItem>
+                <MudSelectItem Value="@((int?)2)">Vocabulary</MudSelectItem>
+                <MudSelectItem Value="@((int?)3)">Pronunciation</MudSelectItem>
+                <MudSelectItem Value="@((int?)4)">Role-Play</MudSelectItem>
+                <MudSelectItem Value="@((int?)5)">Storytelling</MudSelectItem>
+                <MudSelectItem Value="@((int?)6)">Game</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="3" Class="d-flex align-center gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadActivitiesAsync" FullWidth="true">
+                Filter
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFiltersAsync">
+                Reset
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<!-- Activities Grid -->
+@if (_isLoading)
+{
+    <div class="d-flex justify-center align-center pa-12">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (!_activities.Any())
+{
+    <MudPaper Elevation="0" Class="pa-12 text-center rounded-xl lt-card" Style="background-color: #FFFFFF;">
+        <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Size="Size.Large" Color="Color.Secondary" Class="mb-3" />
+        <MudText Typo="Typo.h6">No activities found</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">Create your first speaking activity or game to use in lesson plans.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateActivityDialog" Class="rounded-lg">
+            Create First Activity
+        </MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudGrid>
+        @foreach (var a in _activities)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="0" Class="rounded-xl lt-card h-100 d-flex flex-column" Style="background-color: #FFFFFF; border: 1px solid rgba(226, 232, 240, 0.8);">
+                    <MudCardHeader>
+                        <CardHeaderAvatar>
+                            <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                                <MudIcon Icon="@GetCategoryIcon(a.CategoryName)" />
+                            </MudAvatar>
+                        </CardHeaderAvatar>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">@a.ActivityName</MudText>
+                            <span class="lt-badge-soft-blue" style="font-size: 11px;">@a.CategoryName</span>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudChip T="string" Color="@(a.DifficultyLevel == "Easy" ? Color.Success : (a.DifficultyLevel == "Hard" ? Color.Error : Color.Warning))" Size="Size.Small" Variant="Variant.Outlined">
+                                @a.DifficultyLevel
+                            </MudChip>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Class="flex-grow-1">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4 text-truncate-2">
+                            @a.Description
+                        </MudText>
+
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Duration:</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@a.DurationMinutes Mins</MudText>
+                        </div>
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Age Group:</MudText>
+                            <MudText Typo="Typo.caption" Style="font-weight: 600;">@(a.SuitableAgeGroup ?? "All Young Learners")</MudText>
+                        </div>
+                        @if (!string.IsNullOrEmpty(a.ExpectedLearningOutcome))
+                        {
+                            <MudAlert Severity="Severity.Normal" Dense="true" Class="mt-2 rounded-lg" Style="font-size: 11px; background-color: #F8FAFC;">
+                                <strong>Goal:</strong> @a.ExpectedLearningOutcome
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                    <MudDivider />
+                    <MudCardActions Class="pa-3 d-flex justify-space-between align-center">
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" 
+                                   OnClick="@(() => OpenEditActivityDialogAsync(a.ActivityId))">
+                            Edit Activity
+                        </MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Color="Color.Error" Size="Size.Small" 
+                                       OnClick="@(() => DeleteActivityAsync(a.ActivityId, a.ActivityName))" />
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<ActivitySummaryResponseModel> _activities = new();
+    private bool _isLoading = true;
+    private string? _searchTerm;
+    private int? _selectedCategoryId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActivitiesAsync();
+    }
+
+    private async Task LoadActivitiesAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var request = new SearchActivityRequestModel
+            {
+                PageNumber = 1,
+                PageSize = 50,
+                SearchTerm = _searchTerm,
+                CategoryId = _selectedCategoryId
+            };
+
+            var res = await ActivityApi.GetActivitiesAsync(request);
+            if (res != null && res.IsSuccess && res.Data != null)
+            {
+                _activities = res.Data.Items.ToList();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to load activities.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        _searchTerm = null;
+        _selectedCategoryId = null;
+        await LoadActivitiesAsync();
+    }
+
+    private async Task HandleSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadActivitiesAsync();
+        }
+    }
+
+    private async Task OpenCreateActivityDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ActivityDialog>("New Speaking Activity", options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadActivitiesAsync();
+        }
+    }
+
+    private async Task OpenEditActivityDialogAsync(int id)
+    {
+        var res = await ActivityApi.GetActivityByIdAsync(id);
+        if (res == null || !res.IsSuccess || res.Data == null)
+        {
+            Snackbar.Add(res?.Message ?? "Could not load activity details.", Severity.Error);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["ExistingActivity"] = res.Data };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ActivityDialog>("Edit Activity", parameters, options);
+        var result = await dialog.Result;
+        if (result != null && !result.Canceled)
+        {
+            await LoadActivitiesAsync();
+        }
+    }
+
+    private async Task DeleteActivityAsync(int id, string name)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Activity",
+            ["Message"] = $"Are you sure you want to delete '{name}'?",
+            ["ConfirmText"] = "Delete",
+            ["Color"] = Color.Error
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Activity", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            var res = await ActivityApi.DeleteActivityAsync(id);
+            if (res != null && res.IsSuccess)
+            {
+                Snackbar.Add("Activity removed.", Severity.Info);
+                await LoadActivitiesAsync();
+            }
+            else
+            {
+                Snackbar.Add(res?.Message ?? "Failed to delete activity.", Severity.Error);
+            }
+        }
+    }
+
+    private string GetCategoryIcon(string category) => category switch
+    {
+        "Warm-up" => Icons.Material.Filled.WavingHand,
+        "Vocabulary" => Icons.Material.Filled.Spellcheck,
+        "Pronunciation" => Icons.Material.Filled.GraphicEq,
+        "Role-Play" => Icons.Material.Filled.TheaterComedy,
+        "Storytelling" => Icons.Material.Filled.AutoStories,
+        _ => Icons.Material.Filled.SportsEsports
+    };
+}
