@@ -5,7 +5,8 @@ namespace LittleTalk.Client.Services.Features;
 
 public class LessonPlanApiClient : BaseFeatureApiClient, ILessonPlanApiClient
 {
-    public LessonPlanApiClient(HttpClient http) : base(http)
+    public LessonPlanApiClient(HttpClient http, CustomAuthenticationStateProvider authStateProvider) 
+        : base(http, authStateProvider)
     {
     }
 

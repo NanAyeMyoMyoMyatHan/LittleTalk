@@ -5,7 +5,8 @@ namespace LittleTalk.Client.Services.Features;
 
 public class DashboardApiClient : BaseFeatureApiClient, IDashboardApiClient
 {
-    public DashboardApiClient(HttpClient http) : base(http)
+    public DashboardApiClient(HttpClient http, CustomAuthenticationStateProvider authStateProvider) 
+        : base(http, authStateProvider)
     {
     }
 

@@ -5,7 +5,8 @@ namespace LittleTalk.Client.Services.Features;
 
 public class AttendanceApiClient : BaseFeatureApiClient, IAttendanceApiClient
 {
-    public AttendanceApiClient(HttpClient http) : base(http)
+    public AttendanceApiClient(HttpClient http, CustomAuthenticationStateProvider authStateProvider) 
+        : base(http, authStateProvider)
     {
     }
 

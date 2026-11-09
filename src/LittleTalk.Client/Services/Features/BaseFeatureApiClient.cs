@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using LittleTalk.Model.Common;
@@ -7,21 +8,39 @@ namespace LittleTalk.Client.Services.Features;
 public abstract class BaseFeatureApiClient
 {
     protected readonly HttpClient Http;
+    protected readonly CustomAuthenticationStateProvider? AuthStateProvider;
     protected static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    protected BaseFeatureApiClient(HttpClient http)
+    protected BaseFeatureApiClient(HttpClient http, CustomAuthenticationStateProvider? authStateProvider = null)
     {
         Http = http;
+        AuthStateProvider = authStateProvider;
+    }
+
+    protected async Task AttachAuthorizationHeaderAsync(HttpRequestMessage request)
+    {
+        if (request.Headers.Authorization != null || AuthStateProvider == null)
+        {
+            return;
+        }
+
+        var token = await AuthStateProvider.GetTokenAsync();
+        if (!string.IsNullOrEmpty(token))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
     }
 
     protected async Task<Result<T>> SendGetAsync<T>(string uri, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await Http.GetAsync(uri, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            await AttachAuthorizationHeaderAsync(request);
+            var response = await Http.SendAsync(request, cancellationToken);
             return await DeserializeResultAsync<T>(response, cancellationToken);
         }
         catch (Exception ex)
@@ -30,11 +49,16 @@ public abstract class BaseFeatureApiClient
         }
     }
 
-    protected async Task<Result<T>> SendPostAsync<T, TRequest>(string uri, TRequest request, CancellationToken cancellationToken = default)
+    protected async Task<Result<T>> SendPostAsync<T, TRequest>(string uri, TRequest requestData, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await Http.PostAsJsonAsync(uri, request, JsonOptions, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, uri)
+            {
+                Content = JsonContent.Create(requestData, options: JsonOptions)
+            };
+            await AttachAuthorizationHeaderAsync(request);
+            var response = await Http.SendAsync(request, cancellationToken);
             return await DeserializeResultAsync<T>(response, cancellationToken);
         }
         catch (Exception ex)
@@ -43,11 +67,16 @@ public abstract class BaseFeatureApiClient
         }
     }
 
-    protected async Task<Result<T>> SendPutAsync<T, TRequest>(string uri, TRequest request, CancellationToken cancellationToken = default)
+    protected async Task<Result<T>> SendPutAsync<T, TRequest>(string uri, TRequest requestData, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await Http.PutAsJsonAsync(uri, request, JsonOptions, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Put, uri)
+            {
+                Content = JsonContent.Create(requestData, options: JsonOptions)
+            };
+            await AttachAuthorizationHeaderAsync(request);
+            var response = await Http.SendAsync(request, cancellationToken);
             return await DeserializeResultAsync<T>(response, cancellationToken);
         }
         catch (Exception ex)
@@ -60,7 +89,9 @@ public abstract class BaseFeatureApiClient
     {
         try
         {
-            var response = await Http.DeleteAsync(uri, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Delete, uri);
+            await AttachAuthorizationHeaderAsync(request);
+            var response = await Http.SendAsync(request, cancellationToken);
             return await DeserializeResultAsync(response, cancellationToken);
         }
         catch (Exception ex)

@@ -44,79 +44,68 @@ try
     builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
     builder.Services.AddAuthorizationCore();
 
-    // 3. API Clients & HTTP Message Handler
+    // 3. API Clients
     var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5131/";
-    builder.Services.AddTransient<TokenAuthenticationHandler>();
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IAuthApiClient, LittleTalk.Client.Services.Features.AuthApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IStudentApiClient, LittleTalk.Client.Services.Features.StudentApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.ICourseApiClient, LittleTalk.Client.Services.Features.CourseApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.ILessonPlanApiClient, LittleTalk.Client.Services.Features.LessonPlanApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.ITeachingMethodApiClient, LittleTalk.Client.Services.Features.TeachingMethodApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IActivityApiClient, LittleTalk.Client.Services.Features.ActivityApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IAttendanceApiClient, LittleTalk.Client.Services.Features.AttendanceApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IAssessmentApiClient, LittleTalk.Client.Services.Features.AssessmentApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IDashboardApiClient, LittleTalk.Client.Services.Features.DashboardApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     builder.Services.AddHttpClient<LittleTalk.Client.Services.Features.IReportApiClient, LittleTalk.Client.Services.Features.ReportApiClient>(client =>
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(10);
-    })
-    .AddHttpMessageHandler<TokenAuthenticationHandler>();
+    });
 
     // 4. Health Checks
     builder.Services.AddHealthChecks();

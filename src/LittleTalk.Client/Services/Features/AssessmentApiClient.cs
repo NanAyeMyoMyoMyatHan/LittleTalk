@@ -5,7 +5,8 @@ namespace LittleTalk.Client.Services.Features;
 
 public class AssessmentApiClient : BaseFeatureApiClient, IAssessmentApiClient
 {
-    public AssessmentApiClient(HttpClient http) : base(http)
+    public AssessmentApiClient(HttpClient http, CustomAuthenticationStateProvider authStateProvider) 
+        : base(http, authStateProvider)
     {
     }
 

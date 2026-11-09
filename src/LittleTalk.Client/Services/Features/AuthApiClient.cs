@@ -5,7 +5,8 @@ namespace LittleTalk.Client.Services.Features;
 
 public class AuthApiClient : BaseFeatureApiClient, IAuthApiClient
 {
-    public AuthApiClient(HttpClient http) : base(http)
+    public AuthApiClient(HttpClient http, CustomAuthenticationStateProvider authStateProvider) 
+        : base(http, authStateProvider)
     {
     }
 
