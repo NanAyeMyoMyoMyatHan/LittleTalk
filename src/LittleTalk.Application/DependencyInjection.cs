@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<IStudentService, StudentService>();
         services.AddScoped<LittleTalk.Application.Features.Courses.Services.ICourseService, LittleTalk.Application.Features.Courses.Services.CourseService>();
         services.AddScoped<LittleTalk.Application.Features.LessonPlans.Services.ILessonPlanService, LittleTalk.Application.Features.LessonPlans.Services.LessonPlanService>();
+        services.AddScoped<LittleTalk.Application.Features.LessonPlans.Services.IAiLessonPlanGeneratorService, LittleTalk.Application.Features.LessonPlans.Services.AiLessonPlanGeneratorService>();
         services.AddScoped<LittleTalk.Application.Features.TeachingMethods.Services.ITeachingMethodService, LittleTalk.Application.Features.TeachingMethods.Services.TeachingMethodService>();
         services.AddScoped<LittleTalk.Application.Features.Activities.Services.IActivityService, LittleTalk.Application.Features.Activities.Services.ActivityService>();
         services.AddScoped<LittleTalk.Application.Features.Attendance.Services.IAttendanceService, LittleTalk.Application.Features.Attendance.Services.AttendanceService>();

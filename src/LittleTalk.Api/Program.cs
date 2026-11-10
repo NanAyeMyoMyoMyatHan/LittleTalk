@@ -34,6 +34,12 @@ try
     builder.Services.AddInfrastructureServices(builder.Configuration);
     builder.Services.AddApplicationServices();
 
+    // Outbound HTTP Client for AI Lesson Generation
+    builder.Services.AddHttpClient("AiClient", client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(60);
+    });
+
     // 3. Configure JWT Authentication
     var jwtSecret = builder.Configuration["JwtSettings:Secret"] 
         ?? LittleTalk.Infrastructure.Authentication.JwtTokenService.DefaultSecret;

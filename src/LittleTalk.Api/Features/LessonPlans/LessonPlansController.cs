@@ -15,12 +15,40 @@ namespace LittleTalk.Api.Features.LessonPlans;
 public class LessonPlansController : BaseApiController
 {
     private readonly ILessonPlanService _lessonPlanService;
+    private readonly IAiLessonPlanGeneratorService _aiLessonPlanGeneratorService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ILogger<LessonPlansController> _logger;
 
-    public LessonPlansController(ILessonPlanService lessonPlanService, ICurrentUserService currentUserService)
+    public LessonPlansController(
+        ILessonPlanService lessonPlanService,
+        IAiLessonPlanGeneratorService aiLessonPlanGeneratorService,
+        ICurrentUserService currentUserService,
+        ILogger<LessonPlansController> logger)
     {
         _lessonPlanService = lessonPlanService;
+        _aiLessonPlanGeneratorService = aiLessonPlanGeneratorService;
         _currentUserService = currentUserService;
+        _logger = logger;
+    }
+
+    [HttpPost("generate-ai")]
+    [ProducesResponseType(typeof(Result<GenerateAiLessonPlanResponseModel>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(Result), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GenerateAiLessonPlan(
+        [FromBody] GenerateAiLessonPlanRequestModel request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation(
+            "[LittleTalk.Api] GenerateAiLessonPlan => Lesson plan AI generation requested. Topic={Topic}, LevelId={LevelId}, UserId={UserId}",
+            request?.Topic, request?.LearningLevelId, _currentUserService.UserId);
+
+        var userId = _currentUserService.UserId ?? 1;
+        var role = _currentUserService.Role ?? "Teacher";
+
+        var result = await _aiLessonPlanGeneratorService.GenerateLessonPlanAsync(request, userId, role, cancellationToken);
+        return ToActionResult(result);
     }
 
     [HttpGet]
