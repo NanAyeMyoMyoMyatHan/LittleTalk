@@ -1,0 +1,12 @@
+{
+  "Development": {
+    "AdminAccount": {
+      "Username": "admin",
+      "Email": "admin@littletalk.com"
+    },
+    "FeatureToggles": {
+      "EnableSwagger": true,
+      "DetailedErrors": true
+    }
+  }
+}

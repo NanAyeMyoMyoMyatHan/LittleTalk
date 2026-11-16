@@ -12,11 +12,11 @@
 
 ## 1. System Architecture
 
-LittleTalk is architected as an enterprise multi-tier solution using **Feature-Based Vertical Slice Architecture** on the backend and **MudBlazor Interactive Server** on the frontend, built with a strict **Database-First** lifecycle against Microsoft SQL Server.
+LittleTalk is architected following the enterprise **GTB Project Structure**, placing all C# projects directly at the repository root and maintaining strict separation of concerns across layers.
 
 ```
                               ┌──────────────────────────────────────────────────┐
-                              │            LittleTalk.Client (Blazor)            │
+                              │            LittleTalk.App (Blazor)            │
                               │  • MudBlazor 9.9.0 Pastel Child-Friendly Theme   │
                               │  • CustomAuthenticationStateProvider + Storage   │
                               │  • Typed ApiClient & Delegating HTTP Handler     │
@@ -24,7 +24,7 @@ LittleTalk is architected as an enterprise multi-tier solution using **Feature-B
                                                        │ HTTPS (JSON / REST API)
                                                        ▼
                               ┌──────────────────────────────────────────────────┐
-                              │              LittleTalk.Api (Web API)            │
+                              │              LittleTalk.BackendApi (Web API)            │
                               │  • Feature Slice Controllers & Endpoints         │
                               │  • Global Exception & Security Headers Middleware│
                               │  • JWT Bearer Authentication & RBAC Policies     │
@@ -34,7 +34,7 @@ LittleTalk is architected as an enterprise multi-tier solution using **Feature-B
                                           │                          │
                                           ▼                          ▼
 ┌──────────────────────────────────────────────────┐   ┌──────────────────────────────────────────────────┐
-│          LittleTalk.Application (Logic)          │   │        LittleTalk.Infrastructure (Data)          │
+│          LittleTalk.Domain (Logic)          │   │        LittleTalk.Database (Data)          │
 │  • Feature DTOs & Service Contracts              │   │  • Scaffolded EF Core LittleTalkDbContext        │
 │  • FluentValidation Rules & Validators           │   │  • 20 Database Entities & Analytical Views       │
 │  • Score Calculation & Grade Tier Rules          │   │  • PBKDF2 Password Hashing & JWT Token Service   │
@@ -237,8 +237,8 @@ The database comes pre-seeded with real-world ESL data and test accounts:
 
 ### Step 2: Verify Connection Strings
 Confirm that `DefaultConnection` in both API configuration files points to your SQL Server:
-- [`src/LittleTalk.Api/appsettings.json`](file:///d:/LittleTalk/src/LittleTalk.Api/appsettings.json)
-- [`src/LittleTalk.Api/appsettings.Development.json`](file:///d:/LittleTalk/src/LittleTalk.Api/appsettings.Development.json)
+- [`src/LittleTalk.BackendApi/appsettings.json`](file:///d:/LittleTalk/src/LittleTalk.BackendApi/appsettings.json)
+- [`src/LittleTalk.BackendApi/appsettings.Development.json`](file:///d:/LittleTalk/src/LittleTalk.BackendApi/appsettings.Development.json)
 
 Default connection string:
 ```json
@@ -250,8 +250,8 @@ Default connection string:
 ### Step 3: Run from Visual Studio 2022
 1. Open [`LittleTalk.sln`](file:///d:/LittleTalk/LittleTalk.sln) in Visual Studio.
 2. The multi-project launch profile `LittleTalk.slnLaunch.user` will launch both projects automatically:
-   - `LittleTalk.Api` -> `http://localhost:5131/swagger`
-   - `LittleTalk.Client` -> `http://localhost:5107`
+   - `LittleTalk.BackendApi` -> `http://localhost:5131/swagger`
+   - `LittleTalk.App` -> `http://localhost:5107`
 3. Press **F5** or **Ctrl+F5**.
 
 ### Step 4: Run from Terminal / CLI
@@ -259,14 +259,14 @@ Open two separate terminal windows:
 
 **Terminal 1 (Backend API):**
 ```powershell
-dotnet run --project d:\LittleTalk\src\LittleTalk.Api\LittleTalk.Api.csproj
+dotnet run --project d:\LittleTalk\src\LittleTalk.BackendApi\LittleTalk.BackendApi.csproj
 ```
 *API Swagger UI: [http://localhost:5131/swagger](http://localhost:5131/swagger)*  
 *Health Check: [http://localhost:5131/health](http://localhost:5131/health)*
 
 **Terminal 2 (Blazor Web App):**
 ```powershell
-dotnet run --project d:\LittleTalk\src\LittleTalk.Client\LittleTalk.Client.csproj
+dotnet run --project d:\LittleTalk\src\LittleTalk.App\LittleTalk.App.csproj
 ```
 *Blazor Web App: [http://localhost:5107](http://localhost:5107)*
 
@@ -299,13 +299,13 @@ d:\LittleTalk\
 ├── database\
 │   └── LittleTalk_Db_Init.sql              # Master DDL script (20 tables, triggers, seeds)
 ├── src\
-│   ├── LittleTalk.Infrastructure\          # Scaffolding & Data Access
+│   ├── LittleTalk.Database\          # Scaffolding & Data Access
 │   │   ├── Authentication\                 # PBKDF2 PasswordHasher & JwtTokenService
 │   │   ├── Data\
 │   │   │   ├── Entities\                   # 20 Scaffolded EF Core entity classes
 │   │   │   └── LittleTalkDbContext.cs      # EF Core DbContext with constraints & relationships
 │   │   └── Services\                       # CurrentUserService
-│   ├── LittleTalk.Application\             # Business Logic & Core Contracts
+│   ├── LittleTalk.Domain\             # Business Logic & Core Contracts
 │   │   ├── Common\                         # Exceptions, Models (ApiResponse, PagedResult)
 │   │   └── Features\                       # Vertical Slices
 │   │       ├── Activities\                 # DTOs, Services, Validators
@@ -318,12 +318,12 @@ d:\LittleTalk\
 │   │       ├── Reports\                    # Progress dossier & skill radar data
 │   │       ├── Students\                   # Child profiles & learning history
 │   │       └── TeachingMethods\            # ESL methods library
-│   ├── LittleTalk.Api\                     # ASP.NET Core Web API
+│   ├── LittleTalk.BackendApi\                     # ASP.NET Core Web API
 │   │   ├── Extensions\                     # Swagger & DI Extensions
 │   │   ├── Features\                       # Feature slice API controllers
 │   │   ├── Middleware\                     # Global exception & security headers middleware
 │   │   └── Program.cs                      # Pipeline configuration, health checks, Swagger
-│   └── LittleTalk.Client\                  # Blazor Web App (MudBlazor UI)
+│   └── LittleTalk.App\                  # Blazor Web App (MudBlazor UI)
 │       ├── Components\
 │       │   ├── Dialogs\                    # Modal dialogs for all CRUD operations
 │       │   ├── Layout\                     # MainLayout with pastel theme, NavMenu, AppBar
@@ -343,3 +343,4 @@ d:\LittleTalk\
 ## 9. License & Usage
 
 Developed as an enterprise educational management solution for English language learning academies and ESL educators. All rights reserved.
+

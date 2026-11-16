@@ -1,7 +1,24 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/LittleTalk.Api/LittleTalk.Api.csproj" />
-    <Project Path="src/LittleTalk.Application/LittleTalk.Application.csproj" />
-    <Project Path="src/LittleTalk.Infrastructure/LittleTalk.Infrastructure.csproj" />
+  <Folder Name="/.Config/">
+    <File Path="AGENTS.md" />
+    <File Path="Config/appsettings.json" />
+    <File Path="Config/custom-settings-dev.json" />
   </Folder>
+  <Folder Name="/Common/">
+    <Project Path="LittleTalk.Database/LittleTalk.Database.csproj" />
+  </Folder>
+  <Folder Name="/Domain/">
+    <Project Path="LittleTalk.Domain/LittleTalk.Domain.csproj" />
+    <Project Path="LittleTalk.Tests/LittleTalk.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Shared/">
+    <Project Path="LittleTalk.Models/LittleTalk.Models.csproj" />
+    <Project Path="LittleTalk.Shared/LittleTalk.Shared.csproj" />
+  </Folder>
+  <Folder Name="/_Documents/">
+    <File Path="README.md" />
+    <File Path="docs/architecture.md" />
+  </Folder>
+  <Project Path="LittleTalk.App/LittleTalk.App.csproj" />
+  <Project Path="LittleTalk.BackendApi/LittleTalk.BackendApi.csproj" />
 </Solution>

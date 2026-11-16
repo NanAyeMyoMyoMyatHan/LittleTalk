@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "BackendApi + App",
+    "Projects": [
+      {
+        "Path": "LittleTalk.BackendApi\\LittleTalk.BackendApi.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "LittleTalk.App\\LittleTalk.App.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      }
+    ]
+  }
+]
